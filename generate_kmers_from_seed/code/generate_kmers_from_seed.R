@@ -6,19 +6,28 @@ library("TFBSTools")
 
 args <- commandArgs(trailingOnly = TRUE)
 arrays=as.numeric(args[1])
+arrays=arrays+3000
 
 metadata=read_delim("/projappl/project_2013895/motif_metadata/metadata_final.tsv")
 
+# test_ind=c(857,861,876,898,999,847,895,991)
+# test_ind=c(821,822,834,838,847,857,861,876,895,898,999,906,920,951,992) 
+# metadata$seed[test_ind]
+# "NGYGYTAAYNNNNNNTNACACNN"         "RGGTGNTAATNNNNNNNNNCASYNN"       "NNGYGNNNNGGCGCSNNNNCRCNN"        "RGGTGNGANNNNNNNNTNNCACCGGAAGY"  
+# "NCCGGWNNNNNNNNNNNSCATTAN"        "RAGGTSRNNNNNNNNNNNNNNNNCGGAAGYN" "RRGTGTKNNNNNNNNNNNNNNCMGGANNN"   "NGGTGTNNNNNNNNNNNNNNNCCGGAWNNN" 
+# "RGTGTKRNNNNNNNNNNNCNCMGGAARN"    "RNGTGNNNNNNNNNNNNNRCRCCGGAWSN"   "NGGTGTNNNNNNNNNNNNNCACNTNNTWAN"  "RSCGGWAATKNNNNNNNNMATTA"        
+# "NNGYGNNNNNNNNWAACAACACNN"        "RTRSKGGCGGANNNNNNATCCNNN"        "NNNACGANNNNNNTCGTNNN"   
+
 pseudocount=0.01
 
-start_ind=arrays*10+1 #100
-end_ind=(arrays+1)*10 #100
-len=10 #100
-
-#3933 motifs
-if(end_ind>393){ # 398 
-  end_ind=3933
-}
+# start_ind=arrays*10+1 #100
+# end_ind=(arrays+1)*10 #100
+# len=10 #100
+# 
+# #3933 motifs
+# if(end_ind>393){ # 398 
+#   end_ind=3933
+# }
 
 # This code could also score the k-mers based on PWM
 # sort the k-mers based on the scores and give rank 
@@ -76,10 +85,10 @@ score_sequence <- function(seq, pssm){
 }
   
   
+index=arrays
 
-
-for(index in seq(start_ind, end_ind, 1)){ #0-9
-
+#for(index in seq(start_ind, end_ind, 1)){ #0-9
+  print(index)
   #index=which(metadata$ID=="MEIS1_DLX3_CAP-SELEX_TAAAGC40NGAA_AT_TGACANSNTAATTG_1_3")
   data=metadata[index,] 
   
@@ -202,4 +211,4 @@ for(index in seq(start_ind, end_ind, 1)){ #0-9
               data$ID, ".tsv"),
               col_names= FALSE, 
               delim="\t")
-}
+#}

@@ -1,7 +1,7 @@
 library("readr")
 library("dplyr")
 library("stringr")
-
+rm(list=ls())
 metadata=read_delim("/projappl/project_2013895/motif_metadata/metadata_final.tsv")
 
 strange_cycle=c("2b0","2u","3b0", "3b1", "3b1u",   "3u", "4b0",   "4b2",   "4u")
@@ -59,8 +59,11 @@ df$file.ending=NULL
 df$filename=SELEX_data_filenames
 
 metadata_Jolma2013$SELEX_filename=NA
-metadata_Jolma2013$SELEX_previous_cycle_filename=NA
-metadata_Jolma2013$SELEX_ZeroCycle_filename=NA
+metadata_Jolma2013$SELEX_background_filename=NA
+
+metadata_Jolma2013$unique_background=FALSE
+metadata_Jolma2013$cycle_background=NA
+
   
 for(i in 1:nrow(metadata_Jolma2013)){
   #i=1
@@ -71,21 +74,19 @@ for(i in 1:nrow(metadata_Jolma2013)){
   ligand=metadata_Jolma2013$ligand[i]
   batch=metadata_Jolma2013$batch[i]
   cycle=as.numeric(metadata_Jolma2013$cycle[i])
-  
+  metadata_Jolma2013$cycle_background[i]=cycle-1
   df %>% filter(symbol==.env$symbol)
   
   metadata_Jolma2013$SELEX_filename[i]=paste0(data_path,study, "/submitted_ftp/",df %>% filter(symbol==.env$symbol & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle) %>% select(filename))
-  metadata_Jolma2013$SELEX_ZeroCycle_filename[i]=paste0(data_path,study, "/submitted_ftp/",df %>% filter(symbol=="ZeroCycle" & ligand==.env$ligand) %>% select(filename))
-  metadata_Jolma2013$SELEX_previous_cycle_filename[i]=paste0(data_path,study, "/submitted_ftp/",df %>% filter(symbol==.env$symbol & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle-1) %>% select(filename))
+  metadata_Jolma2013$SELEX_background_filename[i]=paste0(data_path,study, "/submitted_ftp/",df %>% filter(symbol==.env$symbol & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle-1) %>% select(filename))
 }
 
 
 
 
 
-lookup=c(CSC_SELEX_filename="SELEX_filename",            
-         CSC_SELEX_previous_cycle_filename="SELEX_previous_cycle_filename",
-         CSC_SELEX_ZeroCycle_filename="SELEX_ZeroCycle_filename")
+lookup=c(CSC_SELEX_filename="SELEX_filename",    
+         CSC_SELEX_background_filename="SELEX_background_filename")
 
 
 
@@ -98,46 +99,38 @@ metadata_Jolma2013$Allas_SELEX_filename=gsub("/scratch/project_2013895/SELEX/dat
                                              metadata_Jolma2013$CSC_SELEX_filename)
 
 
-metadata_Jolma2013$Allas_SELEX_previous_cycle_filename=gsub("/scratch/project_2013895/SELEX/data/Jolma2013/submitted_ftp/", 
+metadata_Jolma2013$Allas_SELEX_background_filename=gsub("/scratch/project_2013895/SELEX/data/Jolma2013/submitted_ftp/", 
                                              "https://a3s.fi/Jolma2013/", 
-                                             metadata_Jolma2013$CSC_SELEX_previous_cycle_filename)
-metadata_Jolma2013$Allas_SELEX_ZeroCycle_filename=gsub("/scratch/project_2013895/SELEX/data/Jolma2013/submitted_ftp/", 
-                                                      "https://a3s.fi/Jolma2013/", 
-                                                      metadata_Jolma2013$CSC_SELEX_ZeroCycle_filename)
+                                             metadata_Jolma2013$CSC_SELEX_background_filename)
 
 
 missing_ind=which(str_detect(metadata_Jolma2013$CSC_SELEX_filename, "/character"))
 metadata_Jolma2013$CSC_SELEX_filename[missing_ind]=NA
-metadata_Jolma2013$CSC_SELEX_previous_cycle_filename[missing_ind]=NA
-
 metadata_Jolma2013$Allas_SELEX_filename[missing_ind]=NA
-metadata_Jolma2013$Allas_SELEX_previous_cycle_filename[missing_ind]=NA
 
-missing_ind=which(str_detect(metadata_Jolma2013$CSC_SELEX_ZeroCycle_filename, "/character"))
-metadata_Jolma2013$CSC_SELEX_ZeroCycle_filename[missing_ind]=NA
-metadata_Jolma2013$Allas_SELEX_ZeroCycle_filename[missing_ind]=NA
+
+missing_ind=which(str_detect(metadata_Jolma2013$CSC_SELEX_background_filename, "/character"))
+metadata_Jolma2013$CSC_SELEX_background_filename[missing_ind]=NA
+metadata_Jolma2013$Allas_SELEX_background_filename[missing_ind]=NA
+
+
 
 metadata_Jolma2013 %>% filter(is.na(CSC_SELEX_filename)) %>% pull(ID)
-
+metadata_Jolma2013 %>% filter(is.na(CSC_SELEX_background_filename)) %>% pull(ID)
 #"EHF_HT-SELEX_TCTTGA20NGTG_AG_NACCCGGAAGTA_2_3"
 #"ELF3_HT-SELEX_TGACCT20NCCA_AG_NACCCGGAAGTAN_2_4"
 #"ELF4_HT-SELEX_TGACTC20NTCA_AG_AACCCGGAAGTR_2_3" 
 
-tmp = metadata_Jolma2013 %>% 
-  select(ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle, seed,Allas_SELEX_filename, 
-         Allas_SELEX_previous_cycle_filename)
 
-  
-write_delim(tmp,"/projappl/project_2013895/motif_metadata/metadata_Jolma2013_Allas.tsv",
-            delim="\t")
 
 
 tmp = metadata_Jolma2013 %>% 
-  select(ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle,seed,CSC_SELEX_filename, 
-         CSC_SELEX_previous_cycle_filename)
+  select(ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle,cycle_background, unique_background,seed,CSC_SELEX_filename, 
+         CSC_SELEX_background_filename, Allas_SELEX_filename, 
+         Allas_SELEX_background_filename)
 
 
-write_delim(tmp,"/projappl/project_2013895/motif_metadata/metadata_Jolma2013_CSC.tsv",
+write_delim(tmp,"/projappl/project_2013895/motif_metadata/metadata_Jolma2013.tsv",
             delim="\t")
 
 

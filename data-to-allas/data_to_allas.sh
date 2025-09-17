@@ -2,7 +2,7 @@
 cd /scratch/project_2013895/SELEX/data/
 
 
-tar -cjvf Jolma2013.tar.bz Jolma2013/submitted_ftp
+#tar -cjvf Jolma2013.tar.bz Jolma2013/submitted_ftp
 
 #Move to allas
 
@@ -14,14 +14,203 @@ tar -cjvf Jolma2013.tar.bz Jolma2013/submitted_ftp
 module load allas
 allas-conf project_2013895
 
+#Check what there is in allas
+a-list -d Jolma2013 | wc -l #2727 DONE!
+ls /scratch/project_2013895/SELEX/data/Jolma2013/submitted_ftp | wc -l #2726
+a-list -d Jolma2015 | wc -l #7049
+ls /scratch/project_2013895/SELEX/data/Jolma2015/submitted_ftp | wc -l #14847 interactive
+a-list -d Morgunova2015 | wc -l #3 DONE!
+ls /scratch/project_2013895/SELEX/data/Morgunova2015/submitted_ftp | wc -l #2
+a-list -d Nitta2015 | wc -l #1244 DONE!
+ls /scratch/project_2013895/SELEX/data/Nitta2015/submitted_ftp | wc -l #1241
 
-a-publish -b SELEX-public Jolma2013.tar.bz Jolma2013.tar.bz
+#a-delete SELEX-public
+#SELEX-public_segments
+a-list -d Xie2025 | wc -l #2527 DONE!
+ls /scratch/project_2013895/SELEX/data/Xie2025/submitted_ftp | wc -l #2526 
+a-list -d Yin2017 | wc -l #5513
+ls /scratch/project_2013895/SELEX/data/Yin2017/submitted_ftp | wc -l #7452 #interactive2
+a-list -d input_libraries | wc -l #1030 DONE!
+ls /scratch/project_2013895/SELEX/data/input_libraries/submitted_ftp | wc -l #1029
+
+
+#a-publish -b SELEX-public Jolma2013.tar.bz Jolma2013.tar.bz
 
 cd /scratch/project_2013895/SELEX/data/Jolma2013/submitted_ftp
 
 for file in *; do
   echo "Processing $file"
   a-publish -b Jolma2013 $file
+done
+
+#Processing ERF_E2F4_1_AAC_TTACAG40NGTG.fastq.gz
+cd /scratch/project_2013895/SELEX/data/Jolma2015/submitted_ftp
+
+files=(*)
+echo ${files[7049]} #HOXC10_CREB3L1_3_AZ_TGCTTG40NTGC.fastq.gz
+
+mapfile -t included_files < /projappl/project_2013895/SELEX/data-to-allas/Jolma2015.txt
+
+# Turn included_files into an associative array for fast lookup
+declare -A incmap
+for f in "${included_files[@]}"; do
+    incmap["$f"]=1
+done
+
+# Filter files, keep original order
+filtered=()
+for f in "${files[@]}"; do
+    if [[ ${incmap["$f"]+yes} ]]; then
+        filtered+=("$f")
+    fi
+done
+
+# Result
+printf '%s\n' "${filtered[@]}"
+
+#What there already is in Allas
+mapfile -t added < <(a-list -d Jolma2015)
+
+# build lookup table from added
+declare -A in_added
+for f in "${added[@]}"; do
+    in_added["$f"]=1
+done
+
+# collect those in filtered but not in added
+not_in_added=()
+for f in "${filtered[@]}"; do
+    if [[ -z ${in_added["$f"]+yes} ]]; then
+        not_in_added+=("$f")
+    fi
+done
+
+# print result
+printf '%s\n' "${not_in_added[@]}"
+
+
+
+
+#for file in *; do
+
+#ls | awk '/ERF_E2F4_1_AAC_TTACAG40NGTG.fastq.gz/ {found=1} found'
+files=$(ls | awk '/ERF_E2F4_1_AAC_TTACAG40NGTG.fastq.gz/ {found=1} found')
+
+#ls | awk '/FOXO1_SOX17_1_AS_TGACTA40NGGC.fastq.gz/ {found=1} found'
+files=$(ls | awk '/FOXO1_SOX17_1_AS_TGACTA40NGGC.fastq.gz/ {found=1} found')
+
+files=$(ls | awk '/HOXA3_PITX1_3_AY_TACTAG40NGGA.fastq.gz/ {found=1} found')
+
+
+for file in $files; do
+  echo "Processing $file"
+  a-publish -b Jolma2015 $file
+done
+
+for file in ${not_in_added[@]}; do
+  echo "Processing $file"
+  a-publish -b Jolma2015 $file
+done
+
+
+#https://a3s.fi/Jolma2015/293FT_MEIS1_sorted.bam.fastq.gz
+
+cd /scratch/project_2013895/SELEX/data/input_libraries/submitted_ftp
+
+#ls | awk '/ZeroCycle_TTTGTT40NTTAG_0_0.fastq.gz/ {found=1} found'
+#This is finished
+for file in *; do
+  echo "Processing $file"
+  a-publish -b input_libraries $file
+done
+
+#This is finished
+cd /scratch/project_2013895/SELEX/data/Morgunova2015/submitted_ftp
+for file in *; do
+  echo "Processing $file"
+  a-publish -b Morgunova2015 $file
+done
+
+#ls | awk '/KY_TTTGTT40NTAT_4.fastq.gz/ {found=1} found'
+#This is finished
+cd /scratch/project_2013895/SELEX/data/Nitta2015/submitted_ftp
+for file in *; do
+  echo "Processing $file"
+  a-publish -b Nitta2015 $file
+done
+
+
+cd /scratch/project_2013895/SELEX/data/Xie2025/submitted_ftp
+for file in *; do
+  echo "Processing $file"
+  a-publish -b Xie2025 $file
+done
+
+
+
+cd /scratch/project_2013895/SELEX/data/Yin2017/submitted_ftp
+
+files=(*)
+
+
+mapfile -t included_files < /projappl/project_2013895/SELEX/data-to-allas/Yin2017.txt
+
+# Turn included_files into an associative array for fast lookup
+declare -A incmap
+for f in "${included_files[@]}"; do
+    incmap["$f"]=1
+done
+
+# Filter files, keep original order
+filtered=()
+for f in "${files[@]}"; do
+    if [[ ${incmap["$f"]+yes} ]]; then
+        filtered+=("$f")
+    fi
+done
+
+# Result
+printf '%s\n' "${filtered[@]}"
+
+#What there already is in Allas
+mapfile -t added < <(a-list -d Yin2017)
+
+# build lookup table from added
+declare -A in_added
+for f in "${added[@]}"; do
+    in_added["$f"]=1
+done
+
+# collect those in filtered but not in added
+not_in_added=()
+for f in "${filtered[@]}"; do
+    if [[ -z ${in_added["$f"]+yes} ]]; then
+        not_in_added+=("$f")
+    fi
+done
+
+# print result
+printf '%s\n' "${not_in_added[@]}"
+
+
+
+
+
+
+#ls | awk '/LHX8_FL_3_KW_TTGCGA40NGTA.fastq.gz/ {found=1} found'
+files=$(ls | awk '/LHX8_FL_4_KW_TAGCTG40NCTA.fastq.gz/ {found=1} found')
+files=$(ls | awk '/PRRX2_FL_3_KV_TGCCAA40NTAG.fastq.gz/ {found=1} found')
+
+for file in $files; do
+#for file in *; do
+  echo "Processing $file"
+  a-publish -b Yin2017 $file
+done
+
+
+for file in ${not_in_added[@]}; do
+  echo "Processing $file"
+  a-publish -b Yin2017 $file
 done
 
 

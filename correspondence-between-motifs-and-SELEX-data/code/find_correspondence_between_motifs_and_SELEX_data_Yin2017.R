@@ -1,7 +1,7 @@
 library("readr")
 library("dplyr")
 library("stringr")
-
+rm(list=ls())
 metadata=read_delim("/projappl/project_2013895/motif_metadata/metadata_final.tsv")
 
 strange_cycle=c("2b0","2u","3b0", "3b1", "3b1u",   "3u", "4b0",   "4b2",   "4u")
@@ -9,6 +9,7 @@ strange_cycle=c("2b0","2u","3b0", "3b1", "3b1u",   "3u", "4b0",   "4b2",   "4u")
 test=metadata %>% filter(cycle %in% strange_cycle) %>% select(ID, study, cycle)
 
 test$study %>% table()
+
 #Jolma2015 Nitta2015   Yin2017 
 #83         2        55 
 
@@ -89,8 +90,12 @@ names(df_input)[1]="ligand"
 
 
 metadata_Yin2017$SELEX_filename=NA
-metadata_Yin2017$SELEX_previous_cycle_filename=NA
-metadata_Yin2017$SELEX_ZeroCycle_filename=NA
+metadata_Yin2017$SELEX_background_filename=NA
+
+
+metadata_Yin2017$unique_background=FALSE
+metadata_Yin2017$cycle_background=NA
+
   
 for(i in 1:nrow(metadata_Yin2017)){
   #i=1
@@ -101,23 +106,29 @@ for(i in 1:nrow(metadata_Yin2017)){
   ligand=metadata_Yin2017$ligand[i]
   batch=metadata_Yin2017$batch[i]
   cycle=metadata_Yin2017$cycle[i]
-  zero_background=FALSE
+  cycle_background=NULL
+  unique_background=FALSE
   #is cycle on of the strange ones
   if(cycle %in% strange_cycle){ #2b0, 3b0,4b0 or 4u 
     
     if(length(grep("b", cycle))==1){
-      zero_background=TRUE
+      cycle_background=0
       cycle=as.numeric(strsplit(cycle, "b")[[1]][1])
       
     }else{
       #4u
       cycle=as.numeric(strsplit(cycle, "u")[[1]][1])
+      cycle_background=cycle
+      unique_background=TRUE
     }
     
   }else{
     cycle=as.numeric(cycle)
+    cycle_background=cycle-1
   }
   
+  metadata_Yin2017$unique_background[i]=unique_background
+  metadata_Yin2017$cycle_background[i]=cycle_background
   
   df %>% filter(symbol==.env$symbol & experiment==.env$experiment)
   
@@ -126,14 +137,15 @@ for(i in 1:nrow(metadata_Yin2017)){
                                               select(filename)
                                             )
   #metadata_Yin2017$SELEX_ZeroCycle_filename[i]=paste0(data_path,study, "/submitted_ftp/",df %>% filter(symbol=="ZeroCycle" & ligand==.env$ligand) %>% select(filename))
-  if(zero_background!=TRUE){
-  metadata_Yin2017$SELEX_previous_cycle_filename[i]=paste0(data_path,study, "/submitted_ftp/",
-                                                           df %>% filter(symbol==.env$symbol & experiment==.env$experiment & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle-1) %>% 
+  if(cycle_background!=0){
+  metadata_Yin2017$SELEX_background_filename[i]=paste0(data_path,study, "/submitted_ftp/",
+                                                           df %>% filter(symbol==.env$symbol & experiment==.env$experiment & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle_background) %>% 
                                                              select(filename)
                                                            )
+    
   }else{
     
-    metadata_Yin2017$SELEX_previous_cycle_filename[i]=paste0(data_path,"input_libraries", "/submitted_ftp/",
+    metadata_Yin2017$SELEX_background_filename[i]=paste0(data_path,"input_libraries", "/submitted_ftp/",
                                                              df_input %>% filter(ligand==.env$ligand) %>% 
                                                                select(filename)
     )
@@ -143,9 +155,8 @@ for(i in 1:nrow(metadata_Yin2017)){
 }
 
 
-lookup=c(CSC_SELEX_filename="SELEX_filename",            
-         CSC_SELEX_previous_cycle_filename="SELEX_previous_cycle_filename",
-         CSC_SELEX_ZeroCycle_filename="SELEX_ZeroCycle_filename")
+lookup=c(CSC_SELEX_filename="SELEX_filename",    
+         CSC_SELEX_background_filename="SELEX_background_filename")
 
 metadata_Yin2017 <- metadata_Yin2017 %>%
   rename(all_of(lookup) )
@@ -157,12 +168,10 @@ metadata_Yin2017$Allas_SELEX_filename=gsub("/scratch/project_2013895/SELEX/data/
                                              metadata_Yin2017$CSC_SELEX_filename)
 
 
-metadata_Yin2017$Allas_SELEX_previous_cycle_filename=gsub("/scratch/project_2013895/SELEX/data/Yin2017/submitted_ftp/", 
+metadata_Yin2017$Allas_SELEX_background_filename=gsub("/scratch/project_2013895/SELEX/data/Yin2017/submitted_ftp/", 
                                              "https://a3s.fi/Yin2017/", 
-                                             metadata_Yin2017$CSC_SELEX_previous_cycle_filename)
-metadata_Yin2017$Allas_SELEX_ZeroCycle_filename=gsub("/scratch/project_2013895/SELEX/data/Yin2017/submitted_ftp/", 
-                                                      "https://a3s.fi/Yin2017/", 
-                                                      metadata_Yin2017$CSC_SELEX_ZeroCycle_filename)
+                                             metadata_Yin2017$CSC_SELEX_background_filename)
+
 
 
 missing_ind=which(str_detect(metadata_Yin2017$CSC_SELEX_filename, "/character"))
@@ -170,14 +179,20 @@ temp=metadata_Yin2017[missing_ind,]
 metadata_Yin2017$CSC_SELEX_filename[missing_ind]=NA
 metadata_Yin2017$Allas_SELEX_filename[missing_ind]=NA
 
-missing_ind=which(str_detect(metadata_Yin2017$CSC_SELEX_previous_cycle_filename, "/character"))
+temp$ID
+
+missing_ind=which(str_detect(metadata_Yin2017$CSC_SELEX_background_filename, "/character"))
 temp=metadata_Yin2017[missing_ind,]
-metadata_Yin2017$CSC_SELEX_previous_cycle_filename[missing_ind]=NA
-metadata_Yin2017$Allas_SELEX_previous_cycle_filename[missing_ind]=NA
+metadata_Yin2017$CSC_SELEX_background_filename[missing_ind]=NA
+metadata_Yin2017$Allas_SELEX_background_filename[missing_ind]=NA
+
+
+   
 
 
 
-#included_ind=which(!str_detect(metadata_Yin2017$CSC_SELEX_previous_cycle_filename, "/character"))
+
+#included_ind=which(!str_detect(metadata_Yin2017$CSC_SELEX_background_filename, "/character"))
 #metadata_Yin2017$cycle[included_ind] %>% table()
 
 
@@ -191,21 +206,15 @@ metadata_Yin2017 %>% filter(is.na(CSC_SELEX_filename)) %>% pull(ID)
 #"ZSCAN5A_HT-SELEX_TCGCCC40NCAT_KR_NYGTCCCYCCCCAAANMN_2_2" "ZSCAN31_Methyl-HT-SELEX_TAGTCT40NGCA_KV_GCATAACYGCCCYGCKKCN_2_4"
 #"ZSCAN31_HT-SELEX_TGGAGA40NCCA_KV_GCATAACKGCCCTGCKKCN_2_4" 
 
-tmp = metadata_Yin2017 %>% 
-  select(ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle, seed,Allas_SELEX_filename, 
-         Allas_SELEX_previous_cycle_filename)
-
-  
-write_delim(tmp,"/projappl/project_2013895/motif_metadata/metadata_Yin2017_Allas.tsv",
-            delim="\t")
-
+metadata_Yin2017 %>% filter(is.na(CSC_SELEX_background_filename)) %>% pull(ID)
 
 tmp = metadata_Yin2017 %>% 
-  select(ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle,seed,CSC_SELEX_filename, 
-         CSC_SELEX_previous_cycle_filename)
+  select(ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle,cycle_background, unique_background,seed,CSC_SELEX_filename, 
+         CSC_SELEX_background_filename,Allas_SELEX_filename, 
+         Allas_SELEX_background_filename)
 
 
-write_delim(tmp,"/projappl/project_2013895/motif_metadata/metadata_Yin2017_CSC.tsv",
+write_delim(tmp,"/projappl/project_2013895/motif_metadata/metadata_Yin2017.tsv",
             delim="\t")
 
 
