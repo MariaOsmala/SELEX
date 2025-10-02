@@ -30,6 +30,10 @@ contains also the links to downloadable selex files:
 Generate k-mers from seed and score them based on motif, add rank
 /projappl/project_2013895/SELEX/generate_kmers_from_seed/experiments/run_generate_kmers_from_seed_better.sh
 
+Only for non-Methyl-SELEX motifs: 
+
+/projappl/project_2013895/SELEX/generate_kmers_from_seed/experiments/run_generate_kmers_from_seed_exclude_Methyl-HT-SELEX.sh
+
 Results are in 
 /scratch/project_2013895/SELEX/streamed_kmers/
 

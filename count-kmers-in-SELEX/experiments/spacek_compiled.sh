@@ -1,21 +1,107 @@
 
 cd /projappl/project_2013895/SELEX/count-kmers-in-SELEX/experiments
 #setwd("/projappl/project_2013895/SELEX/count-kmers-in-SELEX/experiments")
-spacek_path=/projappl/project_2013895/softwares/spacek_Nitta2015
+spacek_path=/projappl/project_2013895/softwares/spacek
 
-PATH=/projappl/project_2013895/softwares/spacek_Nitta2015:$PATH
 PATH=/projappl/project_2013895/softwares/spacek:$PATH
 
-Usage: ./spacek --tool -options [background file name] [sample file name] 
-        [shortest kmer] [longest kmer] [minimum count or fold (with option -s) for printing] 
+#Usage: ./spacek --tool -options [background file name] [sample file name] 
+#        [shortest kmer] [longest kmer] [minimum count or fold (with option -s) for printing] [PWM file (only with option -kmer)]
 
-Tools:
+#Count number of occurrences of subsequences (kmers) of the indicated size. 
+#Indicates if count is higher than sequences within 1 Huddinge distance.
+#Writes also a graphical summary to an svg file.         
+        
+
+Other tools:
+--f [background file name or - for none] [sample file name] [seed kmer sequence (consensus or IUPAC) or 
+     number for automatic (number specifies rank of local max start seed)] [minimum incidence] or
+--pwm [background file name or - for none] [sample file name] [pwm file name] [score cut-off e.g. 0.1 or 10%] [minimum incidence] 
+        Find occurrences of input sequence / pwm and print flanking preference, spacing and orientation information. 
+        Graphical summary of data is also written to an svg file
+ --logo [PWM file name] [output file name (opt)]
+        Generate SVG logo file from input PWM, also generates .png if convert is installed in path
+  --difflogo [PWM1 file name] [PWM2 file name] [offset (opt)] 
+        Generate difference logo (PWM1-PWM2)
+  --dist [PWM1 file name] [PWM2 file name] ['gapped' or kmer1 length (opt)] [length of gapped kmer or kmer2 (opt)] 
+        Calculate uncentered correlation between maximum scores from PWM1 and PWM2 for all kmers. 
+        Default kmers are ungapped, default lengths are PWM widths (8 for gapped)
+  --pwmalign [PWM1 file name] [PWM2 file name] [PWM3 file name (optional)]
+        Align PWMs and generate a svg with logos aligned to PWM2, with boxes indicating similar base positions.
+        Option -contacts shows also base contacts of PWM1 and PWM3 on PWM2.
+
+
+Options:
+
+Logo and sequence formatting:
+  -contacts     Show hydrogen bond contacts (PWMs where contact information is included must be used)
+  -paths        Generate PWM logos using paths and not fonts
+  -neg  Allow negative values in PWM (using paths)
+  -nocall        do not include kmer-based prediction calls into logos
+  -noname       Do not include filename in the logo
+  -barcodelogo  Generate PWM barcode logos using colored rectangles
+  -heightscaledbars     Scale height of barcode logos based on nucleotide frequency
+  -maxheightscaledbars  Scale height of barcode logos based on maximum nucleotide frequency at position
+  -colorscaledbars      Scale color of barcode logos based on nucleotide frequency
+  -label        Include white IUPAC label to barcodelogo (cutoff = more than 50% of max)
+  -rna  Input sequence is from RNA, use uracil (U) instead of thymidine (T) in sequences and logos
+  -CpG  Highlight CpGs in logos if they occur with lower (opaque) or higher (black outline) frequency in sample file than in control file 
+
+Input sequences:
+  -14N  Set sequence length to 14N (default is 20N)
+  -30N  Set sequence length to 30N
+  -40N  Set sequence length to 40N
+  -u    Use only unique input sequences
+
+Kmer counting:
+  -nogaps       Count only kmers without gaps
+  -allgaps      Count kmers with gaps in any position (default is only middle 1 or 2 positions)
+  -longer≈[kmer_length _difference_cutoff for local max] (default = 0.4)]
+  -iupac≈[cutoff for making a base to an iupac] (default = 0.25 of maximum base)]
+
+Matching and PWM generation:
+  -m=[number]   Generate PWM using multinomial [number] distribution
+  -iterate      iterate input seed based on generated one hit pwm allowing up to 2 bp longer seed per round
+  -iterate-samesize     iterate seed, limit seed size to specified length
+  -iterate-fast  iterate seed using free seed length
+  -lim=[position followed by strand (one or both must be given)]         Show only hits at indicated strand and/or position (e.g. -lim=F, -lim=5 or -lim=4F)
+  -exc=[position][strand],[position][strand]‚..,[position][strand]      Exclude indicated positions and strands (e.g. -exc=4,3F,6R)
+  -both Count both instances of palindromic hits
+  -bothifnotequal       Count both instances of palindromic hits if hit scores are not equal
+  -forwardonly  Count only forward instance of palindromic hits (default counts hit from strand with better score, if score equal alternates between strands)
+  -reverseonly  Count only reverse instance of palindromic hits
+  -forwardifequal       Count only forward instance of palindromic hits if scores equal (default alternates between strands)
+  -reverseifequal       Count only reverse instance of palindromic hits if scores equal
+  -e    Use even background instead of background from file
+  -mono Use mononucleotide background instead of multinomial background
+  -fk=[position] count 4-mers at given position relative to match (e.g. -fk=-4 counts 4-mers that precede search sequence)
+  -mf=[multinomial] match filter: consider only sequences with one hit to indicated multinomial as true one hits
+  -kl=[kmer length] kmer length used to calculate lambda and automatic start seed (default 8)
   
-# Find occurrences of input sequence / pwm and print flanking preference, spacing and orientation information
-./spacek40 --f [background file name or - for none] [sample file name] [kmer sequence (consensus or IUPAC)] [minimum incidence]
-./spacek40 --pwm [background file name or - for none] [sample file name] [pwm file name] [score cut-off e.g. 0.1 or 10%] [minimum incidence] 
+Text output:
+  -q    Print frequencies instead of counts
+  -n    Print nucleotide counts for full sequences
+  -s    Print values for different gap lengths on same line
+  -c    Print raw counts from both input files
+  -p    Print p-values (Winflat program needs to be installed in path)
+  -i    Print incidence of all input sequences
+  -kmer Print kmer count table with scores for each kmer against the PWM indicated
+  -editdist[≈min_local_max_percent_cutoff (default = 10)] (for --f option)      Print table with max count kmer pairs, all local maxima, and all cloud counts for each edit distance
+  -dimer        Print counts for dimeric sequences only
+  -ic   Output information content for all spacings
+  -dinuc        Print dinucleotide data to output and svg (counting dinucleotides uses multinomial 2)
+  -x    Extended output for debugging
 
-./spacek40 --f [background file name or - for none] [sample file name] [kmer sequence (consensus or IUPAC)] [minimum incidence]
+Svg output:
+  -o=[output file name] base name of svg output file(s)
+  -match=[kmer1],[kmer2]        Include spacing and orientation heatmap for these kmers in kmer summary svg
+  -hrows≈[number of rows for kmer svg summary heatmaps (default = 20)]
+  -xyplot       Generate scatterplot of kmer counts for the shortest kmer, with CpG-containing kmers indicated in red
+  -eoplot       Generate scatterplot of kmer counts observed and expected from the one hit PWM
+  
+  
+
+
 
 #k-mers from seed here scored
 #/scratch/project_2013895/SELEX/streamed_kmers_scaled_by_maxscore
@@ -62,24 +148,17 @@ seqkit stats background.fasta #63,043
 sed '/^>/d' sample.fasta > sample.seq
 sed '/^>/d' background.fasta > background.seq
 
-kmer_sequence=ATTTTTACGACC
-mi=1
 
-spacek40 --f background.seq sample.seq NGTCGTWAAANN 1
+#spacek40  -30N --f background.seq sample.seq $seed $mi > seed_output.txt
+#spacek40  -30N --f background.seq sample.seq $kmer_sequence $mi > kmer_output.txt 
 
-spacek40  -30N --f background.seq sample.seq $seed $mi > seed_output.txt
+spacek40  -20N --f background.seq sample.seq $seed > seed_output.txt #Produces also sample.seq_logo.svg (what info does this contain)
 
-spacek40  -30N --f background.seq sample.seq $kmer_sequence $mi > kmer_output.txt 
+spacek40 -nogaps background.seq sample.seq 10 10 1 > counts.txt #752465 
 
-spacek40  -20N --f background.seq sample.seq $seed > seed_output.txt
-spacek40  -20N --f background.seq sample.seq $kmer_sequence $mi > kmer_output.txt 
 
 spacek40 -nogaps -c -20N background.seq sample.seq 10 10 1 > counts.txt
-
 spacek40 -c -20N background.seq sample.seq 10 10 1 > counts.txt
-
-#This works
-spacek40 background.seq sample.seq 10 10 1 > counts.txt
 
 
 #Seed output

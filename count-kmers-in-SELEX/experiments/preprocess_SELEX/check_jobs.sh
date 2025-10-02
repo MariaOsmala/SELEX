@@ -1,8 +1,7 @@
-#29360117,29360086
 sacct \
   --format=JobID,Submit,Cluster,State,Elapsed,ElapsedRaw,ExitCode,User,Group,QOS,AllocCPUS,NNodes,NTasks,TotalCPU,ReqMem,MaxRSS,TIMELIMIT,ElapsedRaw,CPUTime,TotalCPU \
   --parsable2 --units=K \
-  -j 29343847,29345862,29345938,29347707,29359880,29347902,29347983,29348008,29348079,29355999,29356094,29356233,29357154,29357891,29357964,29358009 |
+  -j 29906959,29907097,29907317,29910498 |
 awk -F'|' '
 function jobbase(id) { sub(/\..*$/,"",id); return id }
 function worse(s1,s2) {
@@ -43,4 +42,9 @@ END {
   print "JobID","Submit","Cluster","State","ExitCode","User","Group","QOS","AllocCPUS","NNodes","NTasks","TotalCPU","ReqMem","MaxRSS","TimeLimit","ElapsedRaw","CPUTime"
   for (j in state)
     print j,submit[j],cluster[j],state[j],exitcode[j],user[j],group[j],qos[j],alloccpus[j],nnodes[j],ntasks[j],totalcpu[j],reqmem[j],maxrss[j],timelimit[j],elapsedraw[j],cputime[j]
-}' > jobs_summary.tsv
+}' > check_jobs.tsv
+
+
+sacct -j 29906959,29907097,29907317,29910498 -P --units=K \
+  -o JobID,Submit,Cluster,State,Elapsed,ElapsedRaw,ExitCode,User,Group,QOS,AllocCPUS,NNodes,NTasks,TotalCPU,ReqMem,MaxRSS,TIMELIMIT,ElapsedRaw,CPUTime,TotalCPU \
+| awk -F'|' 'NR==1 || $1 ~ /\.0$/' > steps0.csv

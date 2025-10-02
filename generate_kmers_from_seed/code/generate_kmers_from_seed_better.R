@@ -25,9 +25,10 @@ metadata=metadata %>% filter(!(experiment %in% "Methyl-HT-SELEX")) #3636
 #missing files
 
 results=dir("/scratch/project_2013895/SELEX/streamed_kmers_exclude_Methyl-HT-SELEX/")
-results=gsub(".tsv", "", results)
+results=gsub(".tsv", "", results) #3461
 
 missing=metadata %>% filter(!(ID %in% results)) %>% pull(ID) #175
+#missing=metadata %>% filter(!(ID %in% results))
 
 #missing %in% failed_experiments_all$motif %>% table()
 #FALSE  TRUE 
@@ -43,45 +44,11 @@ missing=metadata %>% filter(!(ID %in% results)) %>% pull(ID) #175
 #failed_experiments_all %>% filter(motif %in%missing) %>% View()
 
 results_path="/scratch/project_2013895/SELEX/streamed_kmers_exclude_Methyl-HT-SELEX/" #3461
-#3461+153=3614!=3636
+#3461+175=3636
 
-metadata=metadata %>% filter(ID %in% missing)
+#metadata=metadata %>% filter(ID %in% missing)
 
 metadata=metadata %>% filter(!(ID=="E2F8_Morgunova2015"))
-
-# failed_inds=c(999,906,920,941,950,951,992,931) #length 202
-# 
-# 
-# failed_inds=c(failed_inds, 
-# 1000+c(18,81,127,136,144,145,150,153,157,174,176,177,183,193,194,205,206,209,212,
-#        216,220,223,224,237,238,239,240,243,244,246,247,248,250,254,255,270,271,276,
-#        282,285,286,287,288,289,291,292,294,295,296,297,293,281,138,
-#        36,46,147,152,163,165,166,170,175,178,182,185,190,192,203,207,219,229,241,256,264,290,299 
-# ), 
-# 1000+c(305,307,310,311,313,314,315,316,317,325,326,329,344,345,368,369,374,375,377,306,365,376, 
-# 301,312,324,330,332,334,342,343,370,424,527),
-# 1000+990, #Morgunava misses seed 
-# 2000+c(221,230,254,278,279,296,76,153,286,290),
-# 2000+c(305,306,311,376,393,424,444,557,579,308,401,502,556,559,561,589),
-# 2000+c(607,615,616,618,635,643,646,648,650,660,665,682,684,694,695,699,705,716,718,
-#        719,726,733,734,749,762,772,831,832, 
-#       640,642,675,683,717,725,736,742),
-# 3000+c(279,283,296,76,77,78,141),
-# 3000+c(341,369,425,426),
-# 3000+c(606,679,682,731,657,742,746,884),
-# 3000+c(905,906,918)
-# 
-# 
-#               )
-# 
-# metadata$seed[failed_inds]
-# 
-# write.table(metadata$ID[-failed_inds], 
-#             "/projappl/project_2013895/SELEX/combine-protein-sequences-and-kmers/experiments/successfull_exps.txt",
-#             quote=FALSE, 
-#             sep="\t",
-#             row.names=FALSE,
-#             col.names=FALSE)
 
 
 
