@@ -8,7 +8,7 @@ mkdir $outfolder
 
 files=(/scratch/project_2013895/SELEX/streamed_kmers/*.tsv)
 
-echo ${#files[@]} #3774
+echo ${#files[@]} #3774 -18(wrong format), there was 202 failed experiments
 
 
 nro_files=${#files[@]} 

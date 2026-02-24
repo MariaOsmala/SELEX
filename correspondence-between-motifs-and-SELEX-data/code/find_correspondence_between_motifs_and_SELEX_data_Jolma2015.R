@@ -40,15 +40,19 @@ df$filename=SELEX_data_filenames
 #Remove ChIP-seq?
 df=df[-which(is.na(df$V5) ),]
 
+#TF2 can be "htSELEX
 colnames(df) <- c("TF1", "TF2", "cycle", "batch", "file.ending", "filename")
 df$ligand=do.call(rbind,strsplit(df$file.ending, "\\."))[,1]
 df$file.ending=NULL
 
 df$symbol=NA
-df$symbol[which(df$TF1==df$TF2)]=df$TF1[which(df$TF1==df$TF2)]
-df$symbol[which(df$TF1!=df$TF2)]=paste0(df$TF1[which(df$TF1!=df$TF2)],"_", df$TF2[which(df$TF1!=df$TF2)])
+df$symbol[which(df$TF2=="htSELEX")]=df$TF1[which(df$TF2=="htSELEX")]
+
+df$symbol[which(df$TF2!="htSELEX")]=paste0(df$TF1[which(df$TF2!="htSELEX")],"_", df$TF2[which(df$TF2!="htSELEX")])
 
 df=df[,c("TF1", "TF2", "symbol","cycle","batch","ligand","filename")]
+
+
 
 # Zero cycle background ---------------------------------------------------
 
@@ -76,6 +80,8 @@ metadata_Jolma2015$cycle_background=NA
   
 for(i in 1:nrow(metadata_Jolma2015)){
   #i=1
+  #i=which(metadata_Jolma2015$ID=="FOS_HT-SELEX_TGAACT40NAAG_KR_NGATGACGTCATCR_2_4")
+  #i=which(metadata_Jolma2015$ID=="ELF2_HT-SELEX_TGCAAG20NAAC_AL_NAMCCGGAAGTR_1_2")
   print(i)
   symbol=metadata_Jolma2015$symbol[i]
   
@@ -156,6 +162,7 @@ metadata_Jolma2015$Allas_SELEX_background_filename=gsub("/scratch/project_201389
 
 missing_ind=which(str_detect(metadata_Jolma2015$CSC_SELEX_filename, "/character"))
 
+
 tmp=metadata_Jolma2015[missing_ind,]
 
 metadata_Jolma2015$CSC_SELEX_filename[missing_ind]=NA
@@ -200,6 +207,8 @@ tmp=metadata_Jolma2015[missing_ind,]
 
 metadata_Jolma2015$CSC_SELEX_background_filename[missing_ind]=NA
 metadata_Jolma2015$Allas_SELEX_background_filename[missing_ind]=NA
+
+
 
 #background missing: 
 

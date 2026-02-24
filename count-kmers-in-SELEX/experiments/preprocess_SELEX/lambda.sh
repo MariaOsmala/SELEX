@@ -8,6 +8,11 @@ cd /projappl/project_2013895/SELEX/count-kmers-in-SELEX/experiments/preprocess_S
 PATH=/projappl/project_2013895/softwares/spacek:$PATH
 module load biokit 
 
+#cd /scratch/project_2013895/SELEX/spacek/lambda_2026
+#find . -type f -empty | wc -l #103
+#remove empty files
+#find . -type f -empty -delete #3470 left
+
 file="/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/metadata_motifs_with_SELEX_data.tsv" #3573
 signal_filenames="CSC_SELEX_filename"             
 background_filenames="CSC_SELEX_background_filename"
@@ -49,50 +54,84 @@ then
      end_ind=$(($nro_pwms-1))
 fi
 
-for ((i=start_ind; i<=end_ind; i++)); do
-  echo "i=$i"
+#target="TFAP2C_MAX_CAP-SELEX_TTAGTC40NTCC_AY_TNSCCNNNGGSNNNNNNNNNNNNNNCACGTGN_1_3"
+#for i in "${!motifs[@]}"; do [[ ${motifs[$i]} == "$target" ]] && echo $i; done
+#for ((i=start_ind; i<=end_ind; i++)); do
+for ((i=0; i<=3573; i++)); do
+  #echo "i=$i"
 
 
   motif=${motifs[$i]}
+  echo $motif
   seed=${seeds[$i]}
-  echo $seed
   ligand=${ligands[$i]}
   
   background=${backgrounds[$i]}
   sample=${signals[$i]}
   
-  sample_base="${sample##*/}"    
-  sample_no_ext="${sample_base%.*}"
+  sample_base="${sample##*/}"    #MEIS1_TGACCT20NGA_O_6.fastq.gz
+  sample_no_ext="${sample_base%.*}" #MEIS1_TGACCT20NGA_O_6.fastq
   
   background_base="${background##*/}"    
   background_no_ext="${background_base%.*}" 
   
   preprocessed_path=/scratch/project_2013895/SELEX/preprocessed_data/
   
+  backgroud_test=$preprocessed_path"${background_no_ext%.fastq}".seq
+  sample_test=$preprocessed_path"${sample_no_ext%.fastq}".seq
+  
+  out="${preprocessed_path}${background_no_ext}"
+  [[ -f "$background_test" ]] || zcat -- "$background" > "$out"
+  
+  out="${preprocessed_path}${sample_no_ext}"
+  [[ -f "$sample_test" ]] || zcat -- "$sample" > "$out"
+  
+  #wc -l ${preprocessed_path}${sample_no_ext} #320512
+  #wc -l ${preprocessed_path}${background_no_ext} #252172
+  
+  
+  out=$preprocessed_path"${sample_no_ext%.fastq}".fasta
+  [[ -f "$sample_test" ]] || seqtk seq -A -- "${preprocessed_path}${sample_no_ext}" > "$out"
+  out=$preprocessed_path"${background_no_ext%.fastq}".fasta
+  [[ -f "$background_test" ]] || seqtk seq -A -- "${preprocessed_path}${background_no_ext}" > "$out"
+  
+  
+  #wc -l $preprocessed_path"${sample_no_ext%.fastq}".fasta # 160256, numbers above divided by 2
+  #wc -l $preprocessed_path"${background_no_ext%.fastq}".fasta # 126086
+  
+  [[ -f "$sample_test" ]] || seqkit stats -- $preprocessed_path"${sample_no_ext%.fastq}".fasta > /projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/seqkit_stats/${sample_no_ext%.fastq}.txt #80,128
+  [[ -f "$background_test" ]] || seqkit stats -- $preprocessed_path"${background_no_ext%.fastq}".fasta > /projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/seqkit_stats/${background_no_ext%.fastq}.txt #63,043
+  
+  out=$preprocessed_path"${sample_no_ext%.fastq}".seq
+  [[ -f "$sample_test" ]] || sed '/^>/d' -- $preprocessed_path"${sample_no_ext%.fastq}".fasta > "$out"
+  
+  out=$preprocessed_path"${background_no_ext%.fastq}".seq
+  [[ -f "$backgroun_test" ]] || sed '/^>/d' -- $preprocessed_path"${background_no_ext%.fastq}".fasta > "$out"
+  
+  rm $preprocessed_path"${sample_no_ext%.fastq}".fasta
+  rm $preprocessed_path"${background_no_ext%.fastq}".fasta
+  rm ${preprocessed_path}${background_no_ext}
+  rm ${preprocessed_path}${sample_no_ext}
+  
+  #Extract the sequence length from the ligand
+  
   if [[ $ligand =~ ([0-9]+N) ]]; then
     ligand_length="${BASH_REMATCH[1]}"   
    
   fi
   
-  if [[ $seed =~ ([0-9]+N) ]]; then
-    seed_length="${BASH_REMATCH[1]}"   
-   
-  fi
   
-
+  out_folder=/scratch/project_2013895/SELEX/spacek/
   
-  out_folder=/scratch/project_2013895/SELEX/spacek_test
-  # --f [background file name or - for none] [sample file name] [shortest kmer] [longest kmer]
-  # [seed kmer sequence (consensus or IUPAC) or number for automatic (number specifies rank of local max start seed)] [minimum incidence]
+  spacek40 "-$ligand_length" --f $preprocessed_path"${background_no_ext%.fastq}".seq $preprocessed_path"${sample_no_ext%.fastq}".seq $seed > $out_folder"lambda_2026/"$motif".txt"  #Produces also sample.seq_logo.svg (what info does this contain)
   
-  spacek40 "-$ligand_length" --f $preprocessed_path"${background_no_ext%.fastq}".seq $preprocessed_path"${sample_no_ext%.fastq}".seq 1 2000 > $out_folder"/"$motif".txt"  #Produces also sample.seq_logo.svg (what info does this contain)
+  svg=$preprocessed_path"${sample_no_ext%.fastq}".seq_logo.svg
+  svg_path=/scratch/project_2013895/SELEX/spacek/svg/
+  out=$svg_path"${motif}".svg
+  #echo $svg
+  [[ -f "$svg" ]] && mv -- $svg $out
   
-  mv $preprocessed_path"${sample_no_ext%.fastq}".seq_logo.svg /scratch/project_2013895/SELEX/spacek/svg/$motif".svg"
   
-  seed_length=${#seed}
-  
-  spacek40 "-$ligand_length" -nogaps $preprocessed_path"${background_no_ext%.fastq}".seq $preprocessed_path"${sample_no_ext%.fastq}".seq "$seed_length" "$seed_length" 1 > $out_folder"kmer_counts/"$motif".txt" #752465 
-
 done
 
 #spacek40 -nogaps -c -20N background.seq sample.seq 10 10 1 > counts.txt

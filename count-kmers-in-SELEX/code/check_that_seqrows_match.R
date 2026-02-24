@@ -226,7 +226,22 @@ metadata$kmer_counts_exist %>% table(useNA = "always")
 
 metadata$signal_seq_rownro %>% hist()
 
-#read k-mer count table
+#Do we have the k-mers with motif match scores and SELEX scores 
+
+results_path="/scratch/project_2013895/SELEX/scored_kmers_from_long_degenerate_seeds/"
+files=dir(results_path)
+
+motif_match_files=files[-grep("_SELEX_counts.tsv",files)]
+motif_match_files=gsub(".tsv", "", motif_match_files)
+
+SELEX_files=files[grep("_SELEX_counts.tsv",files)]
+SELEX_files=gsub("_SELEX_counts.tsv", "", SELEX_files)
+
+
+metadata$motif_match_scores=metadata$ID %in% motif_match_files
+metadata$SELEX_scores=metadata$ID %in% SELEX_files
+
+FOXI1_HT-SELEX_TCGGAA20NGA_AF_GTAAACA_1_4
 
 #metadata$ID[i]
 file <- paste0("/scratch/project_2013895/SELEX/spacek/kmer_counts/", "MEIS1_HT-SELEX_TGACCT20NGA_O_NTGACAN_1_6", ".txt")

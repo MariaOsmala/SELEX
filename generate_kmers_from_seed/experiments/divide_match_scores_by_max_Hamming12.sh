@@ -9,7 +9,7 @@ mkdir $outfolder
 
 files=(/scratch/project_2013895/SELEX/streamed_Hamming12_kmers_exclude_Methyl-HT-SELEX/*.tsv)
 
-echo ${#files[@]} #967
+echo ${#files[@]} #1293
 
 
 nro_files=${#files[@]} 
@@ -23,7 +23,7 @@ length=10 #100
 if [[ $end_ind -gt $(($nro_files-1)) ]] 
 then
      echo $end_ind is greater than $(($nro_files-1))
-     length=$(($nro_files-$start_ind+1))
+     end_ind=$(($nro_files-1))
 fi
 
 

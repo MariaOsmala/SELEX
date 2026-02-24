@@ -3,17 +3,18 @@ array=$1 #0-357
 
 #218-> requires more memory than 50G
 
-cd /projappl/project_2013895/SELEX/count-kmers-in-SELEX/experiments/preprocess_SELEX/
-#setwd("/projappl/project_2013895/SELEX/count-kmers-in-SELEX/experiments")
-PATH=/projappl/project_2013895/softwares/spacek:$PATH
-module load biokit 
+cd /projappl/project_2013895/SELEX/count-kmers-in-SELEX/experiments/jellyfish
+
+PATH=/projappl/project_2013895/softwares/jellyfish-2.3.1/bin:$PATH
+
 
 file="/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/metadata_motifs_with_SELEX_data.tsv" #3573
 signal_filenames="CSC_SELEX_filename"             
 background_filenames="CSC_SELEX_background_filename"
 motifs="ID"
 seeds="seed"
-ligands="ligand"
+
+filtered_files=/scratch/project_2013895/SELEX/data_exclude_reads_with_N/
 
 
 readarray -t signals < <(
@@ -31,9 +32,7 @@ readarray -t seeds < <(
   awk -F'\t' -v c="$seeds" 'NR==1{for(i=1;i<=NF;i++)h[$i]=i; next}{print $(h[c])}' "$file"
 )
 
-readarray -t ligands < <(
-  awk -F'\t' -v c="$ligands" 'NR==1{for(i=1;i<=NF;i++)h[$i]=i; next}{print $(h[c])}' "$file"
-)
+
 
 #array=325 #MAX_HT-SELEX_TGACCT20NGA_Y_NNCACGTGNN_1_2
 
@@ -51,47 +50,47 @@ fi
 
 for ((i=start_ind; i<=end_ind; i++)); do
   echo "i=$i"
-
+  #i=2280
 
   motif=${motifs[$i]}
   seed=${seeds[$i]}
   echo $seed
-  ligand=${ligands[$i]}
+  
+  seed_length=${#seed}
   
   background=${backgrounds[$i]}
-  sample=${signals[$i]}
+  signal=${signals[$i]}
   
-  sample_base="${sample##*/}"    
-  sample_no_ext="${sample_base%.*}"
+  signal_base="${signal##*/}"    
+  signal_no_ext="${signal_base%.*}"
   
   background_base="${background##*/}"    
   background_no_ext="${background_base%.*}" 
   
-  preprocessed_path=/scratch/project_2013895/SELEX/preprocessed_data/
+  jf_folder=/scratch/project_2013895/SELEX/jellyfish/jf/
+  #jf_folder=/scratch/project_2013895/SELEX/jellyfish/jf_tmp/
   
-  if [[ $ligand =~ ([0-9]+N) ]]; then
-    ligand_length="${BASH_REMATCH[1]}"   
-   
-  fi
+  out_folder=/scratch/project_2013895/SELEX/jellyfish/filtered_counts/
+  #out_folder=/scratch/project_2013895/SELEX/jellyfish/counts/
   
-  if [[ $seed =~ ([0-9]+N) ]]; then
-    seed_length="${BASH_REMATCH[1]}"   
-   
-  fi
-  
+  #original
+  #kmers=/scratch/project_2013895/SELEX/kmers/$motif".tsv" #17920
+  #kmers_fasta=/scratch/project_2013895/SELEX/kmers/$motif".fasta" 
+  kmers=/scratch/project_2013895/SELEX/combined_kmers_from_long_degenerate_seeds/$motif".txt" #17408
+  kmers_fasta=/scratch/project_2013895/SELEX/combined_kmers_from_long_degenerate_seeds/$motif".fasta"
 
+  #perl -ne 'print ">\n$_"' $kmers > $kmers_fasta #this is done already
+
+  #original fastq files
+  #zcat $background | jellyfish count /dev/fd/0 -m $seed_length -s 100M -t 10 -C --if $kmers_fasta -o $jf_folder$motif"_background.jf" 
+  #zcat $signal | jellyfish count /dev/fd/0 -m $seed_length -s 100M -t 10 -C --if $kmers_fasta -o $jf_folder$motif"_signal.jf" 
   
-  out_folder=/scratch/project_2013895/SELEX/spacek_test
-  # --f [background file name or - for none] [sample file name] [shortest kmer] [longest kmer]
-  # [seed kmer sequence (consensus or IUPAC) or number for automatic (number specifies rank of local max start seed)] [minimum incidence]
-  
-  spacek40 "-$ligand_length" --f $preprocessed_path"${background_no_ext%.fastq}".seq $preprocessed_path"${sample_no_ext%.fastq}".seq 1 2000 > $out_folder"/"$motif".txt"  #Produces also sample.seq_logo.svg (what info does this contain)
-  
-  mv $preprocessed_path"${sample_no_ext%.fastq}".seq_logo.svg /scratch/project_2013895/SELEX/spacek/svg/$motif".svg"
-  
-  seed_length=${#seed}
-  
-  spacek40 "-$ligand_length" -nogaps $preprocessed_path"${background_no_ext%.fastq}".seq $preprocessed_path"${sample_no_ext%.fastq}".seq "$seed_length" "$seed_length" 1 > $out_folder"kmer_counts/"$motif".txt" #752465 
+  #filtered fastq files (reads with N removed)
+  zcat $filtered_files$background_base | jellyfish count /dev/fd/0 -m $seed_length -s 100M -t 10 -C --if $kmers_fasta -o $jf_folder$motif"_background.jf" 
+  zcat $filtered_files$signal_base | jellyfish count /dev/fd/0 -m $seed_length -s 100M -t 10 -C --if $kmers_fasta -o $jf_folder$motif"_signal.jf" 
+
+  jellyfish dump -c $jf_folder$motif"_background.jf"  > $out_folder$motif"_background_counts.txt"
+  jellyfish dump -c $jf_folder$motif"_signal.jf" > $out_folder$motif"_signal_counts.txt"
 
 done
 

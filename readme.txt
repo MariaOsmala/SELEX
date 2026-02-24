@@ -46,3 +46,34 @@ results are in /scratch/project_2013895/SELEX/streamed_kmers_scaled_by_maxscore/
 
 Try to count k-mers and score them based on SELEX data
 /projappl/project_2013895/SELEX/count-kmers-in-SELEX
+
+
+# Generated k-mer realisations of motif seeds and their Hamming distance 1 neighbours (base substitutions only at positions that are not N )
+/projappl/project_2013895/SELEX/generate_kmers_from_seed/experiments/run_claude_canonical_kmers.sh
+/projappl/project_2013895/SELEX/generate_kmers_from_seed/code/claude_canonical_kmers.R
+
+#results in /scratch/project_2013895/SELEX/kmers_from_long_degenerate_seeds/
+
+#combine k-mers
+/projappl/project_2013895/SELEX/generate_kmers_from_seed/experiments/run_claude_combine_kmers.sh
+/projappl/project_2013895/SELEX/generate_kmers_from_seed/experiments/claude_combine_kmers.sh
+
+#Generate k-mer realisations only at positions that are not Ns
+
+#Hamming1 and Hamming2 neighbourhood
+/projappl/project_2013895/SELEX/generate_kmers_withNs_from_seed/experiment/run_generate_kmers_with_fixed_Ns_hamming12.sh
+
+#Combine k-mers, Hamming1 or Hamming1 + Hamming2 neighbourdhood
+#Check that Hamming2 does not contain Hamming1?
+/projappl/project_2013895/SELEX/generate_kmers_withNs_from_seed/experiment/run_combine_kmers.sh
+
+#k-mer counts in SELEX reads, reads with Ns removed 
+
+#remove reads
+/projappl/project_2013895/SELEX/count-kmers-in-SELEX/experiments/preprocess_SELEX/run_seqkit.sh
+
+#compute lambda
+/projappl/project_2013895/SELEX/count-kmers-in-SELEX/experiments/preprocess_SELEX/run_lambda.sh
+
+#Combine the data into a table: 
+

@@ -3,7 +3,11 @@ library("tidyverse")
 
 rm(list=ls())
 #only CAP-SELEX and HT-SELEX
-motifs_with_SELEX_data=read_delim("/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background.tsv")
+#motifs_with_SELEX_data=read_delim("/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background.tsv")
+motifs_with_SELEX_data=read_delim("/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_06102025.tsv") #3594
+
+#Need to read the type annotations
+
 
 load("/scratch/project_2013895/SELEX/TF-amino-acid-sequences/RData/protein_sequences.RData")
 

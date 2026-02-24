@@ -19,7 +19,11 @@ metadata=metadata %>% filter(!(ID %in% missing$ID))
 
 metadata=metadata[order(metadata$length),]
 
-write_delim(metadata, "/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/metadata_motifs_with_SELEX_data.tsv", delim="\t")
+#which(metadata$seed=="NNNACGANNNNNNTCGTNNN") #3180
+
+metadata %>% filter(seed=="NNNACGANNNNNNTCGTNNN") %>% pull(ID)
+
+write_delim(metadata, "/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/metadata_motifs_with_SELEX_data.tsv", delim="\t") #3573
 
 
 

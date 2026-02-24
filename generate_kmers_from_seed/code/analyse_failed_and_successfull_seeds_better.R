@@ -238,7 +238,7 @@ degeneracy_stats_df=tibble(ID=rep(NA, length(degeneracy_stats_list)),
                                count=rep(gmp::as.bigz(NA), length(degeneracy_stats_list)),
                                bits=rep(NA, length(degeneracy_stats_list)),
                                D_norm=rep(NA, length(degeneracy_stats_list)),
-                               G_norm=rep(NA, length(degeneracy_stats_list)) #,
+                               G_norm=rep(NA, length(degeneracy_stats_list)),
                                canonical_count=rep(gmp::as.bigz(NA), length(degeneracy_stats_list))
                            ) 
 
@@ -312,3 +312,17 @@ ggsave(
   width = 7, height = 5, units = "in"  # set page size
 )    
 
+#Shortest k-mers for which the k-mer generation failed
+
+write.table(metadata, 
+            "/projappl/project_2013895/SELEX/generate_kmers_from_seed/code/metadata_failed_and_successfull_seeds_degeneracy.tsv",
+            quote=FALSE, 
+            sep="\t",
+            row.names=FALSE,
+            col.names=TRUE)
+
+
+metadata=read_tsv("/projappl/project_2013895/SELEX/generate_kmers_from_seed/code/metadata_failed_and_successfull_seeds_degeneracy.tsv")
+
+metadata %>% filter(kmer_generation_successfull==FALSE) %>% filter(length==min(length)) %>% pull(seed)
+#"NNCCGGNNNNNNCCGGNN"

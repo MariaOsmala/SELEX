@@ -5,14 +5,25 @@
 #SBATCH --account=project_2013895
 #SBATCH --partition=small
 #SBATCH --ntasks=1
-#SBATCH --time=00:30:00
-#SBATCH --mem-per-cpu=50G #
+#SBATCH --time=12:00:00
+#SBATCH --mem-per-cpu=350G #
 #SBATCH --cpus-per-task=1
-#SBATCH --array=301-357 # #0-357
+#SBATCH --array=252 # #0-357
 
-# 29906959_[0-10]
-# 29907097_[11-200]
+# sacct --format JobID%-20,State -j 30097036
+
+# 29906959_[0-10] #50G 30min 
+# 29907097_[11-200] #50G 30min
 # 29907317_201-300
+#memory runs out with 50G and 100G
+#30139090_218-230 #200G 12h #OK
+
+# 30141067_231-270 200G memory run out
+# 252-270 memory run out
+# 30143832_252-270 300G FAILED why?
+# 30167050_252
+
+
 # 29910498_301-357
 srun preprocess.sh ${SLURM_ARRAY_TASK_ID} 
 

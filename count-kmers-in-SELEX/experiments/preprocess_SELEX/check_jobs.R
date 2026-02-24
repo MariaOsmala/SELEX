@@ -31,6 +31,7 @@ check_jobs <- check_jobs %>%
   relocate(rownum, .before = 1)  
 
 check_jobs$State %>% table()
+
 #CANCELLED COMPLETED    FAILED 
 #4       274        80 
 
@@ -54,6 +55,7 @@ steps0 <- steps0 %>%
 steps0=steps0 %>%
   arrange(array_job, array_index)
 
+
 steps0 <- steps0 %>%
   mutate(rownum = row_number()) %>%
   relocate(rownum, .before = 1)  
@@ -64,7 +66,9 @@ check_jobs$State %>% table()
 #4       274        80 
 
 steps0$State %>% table()
+
 #CANCELLED CANCELLED by 0      COMPLETED         FAILED 
 #4             56            218             80 
 
 check_jobs=check_jobs %>% mutate(State_step0=steps0$State,.after = State)
+
