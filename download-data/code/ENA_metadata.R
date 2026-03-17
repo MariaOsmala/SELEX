@@ -11,3 +11,5 @@ metadata$library_source %>% table()
 metadata$library_selection %>% table()
 metadata$scientific_name %>% table()
 metadata$instrument_model %>% table()
+
+Nitta2015/filereport_read_run_PRJEB7373_tsv.txt

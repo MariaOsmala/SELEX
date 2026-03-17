@@ -8,10 +8,14 @@ rm(list=ls())
 #motifs_with_SELEX_data=read_delim("/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background.tsv")
 motifs_with_SELEX_data=read_delim("/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_06102025.tsv") #3594
 
+#Are there duplicates
+
+motifs_with_SELEX_data$ID %>% unique() %>% length() #3594
 
 
 # For which motifs the score computations were successfull ----------------
 lambda_info=read_delim("/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_lambda_info.tsv") #3594
+lambda_info$ID %>% unique() %>% length() #3635
 
 motifs_with_SELEX_data=motifs_with_SELEX_data %>% left_join(lambda_info %>% select(ID, lambda, N_sig, N_bg), by="ID")
 
@@ -59,19 +63,44 @@ motifs_with_SELEX_data$type_review[is.na(motifs_with_SELEX_data$type_review)]=mo
 motifs_with_SELEX_data$type_review.x=NULL
 motifs_with_SELEX_data$type_review.y=NULL
 
+motifs_with_SELEX_data$ID %>% unique() %>% length() #3594
+
 motifs_with_SELEX_data$type %>% table(useNA="always") %>% as.data.frame()
 motifs_with_SELEX_data %>% filter(representative=="YES") %>% select(type) %>% table(useNA="always") %>% as.data.frame()
 motifs_with_SELEX_data %>% filter(is.na(type)) %>% pull(ID)
 motifs_with_SELEX_data$type[which(is.na(motifs_with_SELEX_data$type))]=motifs_with_SELEX_data$type_review[which(is.na(motifs_with_SELEX_data$type))]
 
-#composite     composite?        dimeric       dimeric?      monomeric     monomeric?        spacing       spacing?  ssDNA binding ssDNA binding? 
-#  1437              1            709             19            832              7            450              8             72              2 
-#tetrameric    tetrameric?       trimeric        unknown           <NA> 
-#  13             10             12             22              0 
+motifs_with_SELEX_data$type %>% table(useNA="always") %>% as.data.frame()
+# . Freq
+# 1       composite 1437
+# 2      composite?    1
+# 3         dimeric  709
+# 4        dimeric?   19
+# 5       monomeric  832
+# 6      monomeric?    7
+# 7         spacing  450
+# 8        spacing?    8
+# 9   ssDNA binding   72
+# 10 ssDNA binding?    2
+# 11     tetrameric   13
+# 12    tetrameric?   10
+# 13       trimeric   12
+# 14        unknown   22
+# 15           <NA>    0
 
-motifs_with_SELEX_data$type_review %>% table(useNA="always")
-#composite       dimeric     monomeric    monomeric?       spacing ssDNA binding    tetrameric      trimeric       unknown          <NA> 
-#  1443           726           833             2           453            72            17            18            22             8 
+motifs_with_SELEX_data  %>% pull(type_review) %>% table(useNA="always") %>% as.data.frame()
+
+# 1      composite 1443
+# 2        dimeric  726
+# 3      monomeric  833
+# 4     monomeric?    2
+# 5        spacing  453
+# 6  ssDNA binding   72
+# 7     tetrameric   17
+# 8       trimeric   18
+# 9        unknown   22
+# 10          <NA>    8
+
 
 motifs_with_SELEX_data %>% filter(is.na(type_review)) %>% select(ID, representative)
 
@@ -89,10 +118,10 @@ motifs_with_SELEX_data <- motifs_with_SELEX_data %>%
 
 motifs_with_SELEX_data <- motifs_with_SELEX_data %>%
   mutate(sorted_TF1_copies = case_when(
-    type == "monomeric" ~ 1,
-    type == "dimeric" ~ 2,
-    type == "trimeric" ~ 3,
-    type == "tetrameric" ~ 4,
+    type_review == "monomeric" ~ 1,
+    type_review == "dimeric" ~ 2,
+    type_review == "trimeric" ~ 3,
+    type_review == "tetrameric" ~ 4,
     TRUE ~ NA_real_
   ))
 
@@ -115,7 +144,7 @@ motifs_with_SELEX_data$sorted_TF1_copies[row_numbers]=heterodimer_nodes$sorted_T
 motifs_with_SELEX_data$sorted_TF2_copies[row_numbers]=heterodimer_nodes$sorted_TF2_copies[match_inds]
 
 motifs_with_SELEX_data=motifs_with_SELEX_data %>% 
-  relocate(sorted_TF1_copies, sorted_TF2_copies, type,.after=TF2_sorted)
+  relocate(sorted_TF1_copies, sorted_TF2_copies, type_review,.after=TF2_sorted)
 
 
 # Add TF1_copies and TF2_copies 
@@ -129,7 +158,7 @@ motifs_with_SELEX_data$TF1_copies[swap_ids]=motifs_with_SELEX_data$sorted_TF2_co
 motifs_with_SELEX_data$TF2_copies[swap_ids]=motifs_with_SELEX_data$sorted_TF1_copies[swap_ids]
 
 motifs_with_SELEX_data=motifs_with_SELEX_data %>% 
-  relocate(TF1_copies, TF2_copies, type,.after=TF2)
+  relocate(TF1_copies, TF2_copies, type_review,.after=TF2)
 
 #For how many heterodimeric proteins the number of copies is unknown
 
@@ -140,7 +169,7 @@ motifs_with_SELEX_data %>% filter(experiment=="CAP-SELEX" & representative=="YES
 
 table( rowSums( data.frame(X1=as.numeric(gsub("\\?", "", motifs_with_SELEX_data$TF1_copies)), X2=as.numeric(gsub("\\?", "", motifs_with_SELEX_data$TF2_copies)) ) , na.rm=TRUE) )
 #0    1    2    3    4 
-#134  832 2018  561   49 
+#106  833 2035  567   53 
 
 # Load protein sequence data ----------------------------------------------
 
@@ -162,10 +191,10 @@ motifs_with_SELEX_data <- motifs_with_SELEX_data %>%
   ) %>%
   mutate(
     n = case_when(
-      type == "monomeric"  ~ 1,
-      type == "dimeric"    ~ 2,
-      type == "trimeric"   ~ 3,
-      type == "tetrameric" ~ 4,
+      type_review == "monomeric"  ~ 1,
+      type_review == "dimeric"    ~ 2,
+      type_review == "trimeric"   ~ 3,
+      type_review == "tetrameric" ~ 4,
       TRUE ~ 0
     ),
     
@@ -186,6 +215,14 @@ motifs_with_SELEX_data <- motifs_with_SELEX_data %>%
 
 # Yin2017 -----------------------------------------------------------------
 
+#df_Yin2017_protein$ID %>% unique() %>% length() #867 -> 864
+
+#test=df_Yin2017_protein %>% filter(ID %in% names(which((df_Yin2017_protein$ID %>% table())>1)))
+
+remove_ind=which(df_Yin2017_protein$ID %in% names(which((df_Yin2017_protein$ID %>% table())>1)))
+
+df_Yin2017_protein=df_Yin2017_protein[-remove_ind[c(2,4,6)],]
+
 motifs_with_SELEX_data <- motifs_with_SELEX_data %>%
   left_join(
     df_Yin2017_protein %>%
@@ -194,10 +231,10 @@ motifs_with_SELEX_data <- motifs_with_SELEX_data %>%
   ) %>%
   mutate(
     n = case_when(
-      type == "monomeric"  ~ 1,
-      type == "dimeric"    ~ 2,
-      type == "trimeric"   ~ 3,
-      type == "tetrameric" ~ 4,
+      type_review == "monomeric"  ~ 1,
+      type_review == "dimeric"    ~ 2,
+      type_review == "trimeric"   ~ 3,
+      type_review == "tetrameric" ~ 4,
       TRUE ~ 0
     ),
     
@@ -226,7 +263,7 @@ motifs_with_SELEX_data <- motifs_with_SELEX_data %>%
     by = "ID"
   ) %>%
   mutate(
-    n = recode(type,
+    n = recode(type_review,
                monomeric  = 1L,
                dimeric    = 2L,
                trimeric   = 3L,
@@ -262,7 +299,7 @@ motifs_with_SELEX_data <- motifs_with_SELEX_data %>%
     by = "ID"
   ) %>%
   mutate(
-    n = recode(type,
+    n = recode(type_review,
                monomeric  = 1L,
                dimeric    = 2L,
                trimeric   = 3L,
@@ -380,21 +417,24 @@ motifs_with_SELEX_data=motifs_with_SELEX_data %>%
 
 #For how many we were able to find protein sequences
 
-nrow(motifs_with_SELEX_data) #3597
+nrow(motifs_with_SELEX_data) #3594
 
 (is.na(motifs_with_SELEX_data %>% filter(representative=="YES") %>% pull(`protein sequence 1`) )) %>% table()
 
 is.na(motifs_with_SELEX_data$`protein sequence 1`) %>% table()
 #FALSE  TRUE 
-#3200   397
+#3212   382
 
-tmp=motifs_with_SELEX_data %>% select(ID, type, TF1, TF2, TF1_copies, TF2_copies, `protein sequence 1`, `protein sequence 2`, `protein sequence 3`, `protein sequence 4`)
+tmp=motifs_with_SELEX_data %>% select(ID, type_review, TF1, TF2, TF1_copies, TF2_copies, `protein sequence 1`, `protein sequence 2`, `protein sequence 3`, `protein sequence 4`)
 
 #write_delim(motifs_with_SELEX_data, 
 #            "/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_and_proteins_25082025.tsv", delim="\t")
 
+# write_delim(motifs_with_SELEX_data, 
+#             "/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_and_proteins_25022026.tsv", delim="\t")
+
 write_delim(motifs_with_SELEX_data, 
-            "/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_and_proteins_25022026.tsv", delim="\t")
+            "/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_and_proteins_04032026.tsv", delim="\t")
 
 
 

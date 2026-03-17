@@ -8,7 +8,7 @@ library(R.utils)
 library(stringr)
 library(tidyr)
 library("ggpubr")
-
+library("segmented")
 
 rm(list=ls())
 
@@ -28,6 +28,9 @@ table(is.na(metadata$CSC_SELEX_filename) | is.na(metadata$CSC_SELEX_background_f
 #For how many lambda is missing
 
 correlation_data=data.frame(ID=metadata$ID)
+correlation_data$dt_pvalue=NA
+correlation_data$number_of_points=NA
+correlation_data$break_point=NA
 correlation_data$pearson_estimate=NA
 correlation_data$spearman_estimate=NA
 correlation_data$kendall_estimate=NA
@@ -36,7 +39,7 @@ correlation_data$pearson_pvalue=NA
 correlation_data$spearman_pvalue=NA
 correlation_data$kendall_pvalue=NA
 
-figure_path="/scratch/project_2013895/SELEX/Figures/correlation_between_motif_match_scores_and_kmer_counts/"
+figure_path="/scratch/project_2013895/SELEX/Figures/constrained_data_correlation_between_motif_match_scores_and_kmer_counts/"
 
 results_path="/scratch/project_2013895/SELEX/scored_kmers_fixed_N_seeds/"
 
@@ -57,19 +60,67 @@ for(i in 1:nrow(metadata)){
      next
    }
    
-   data=data %>% mutate(ID=metadata$ID[i]) %>% relocate(ID, .before=Kmer)  
-   all_data=rbind(all_data, data)
+   # df must contain x (predictor) and y (response)
+   m0 <- lm(Corrected_count_scaled ~ motif_match_score_scaled, data = data)
+   
+   # Optional: test whether a breakpoint is plausible at all
+   # Davies' test for a change in the slope
+   correlation_data$dt_pvalue[i]=davies.test(m0, seg.Z = ~ motif_match_score_scaled)$p.value
+   
+   # Fit 1-breakpoint segmented model
+   # For one segmented variable and one breakpoint, psi can be omitted (median used as start),
+   # but giving a reasonable starting value often helps convergence.
+   try.segmented=try(m1 <- segmented(m0, seg.Z = ~ motif_match_score_scaled), silent=TRUE)
+   if(unique(!(length(class(try.segmented))>1) & class(try.segmented)=="try-error")){
+     next
+   }
+   #summary(m1)
+   
+   # Point estimate + approx SE are stored in m1$psi
+   #m1$psi
+   
+   bp <- m1$psi["psi1.motif_match_score_scaled", "Est."]   # estimated breakpoint location
+   
+   # Confidence interval for the breakpoint
+   # method = "score" or "gradient" works for segmented *linear* models; "delta" works more generally
+   ci <- confint(m1, parm = "motif_match_score_scaled", method = "delta")
+   
+   bp_hat <- ci[1, 1]
+   bp_lo  <- ci[1, 2]
+   bp_hi  <- ci[1, 3]
+   
+   #df_linear <- subset(data, motif_match_score_scaled >= bp)
+   #More conservative (only points that are very likely before the knee):
+   df_linear_conservative <- subset(data, motif_match_score_scaled >= bp_lo)
+   correlation_data$break_point[i]=bp_lo
+   #lin_fit <- lm(Corrected_count_scaled ~ motif_match_score_scaled, data = df_linear_conservative)
+   #summary(lin_fit)
+   
+   #slope(m1)   # slopes by segment
+   
+   #plot(data$motif_match_score_scaled, data$Corrected_count_scaled, pch = 16)
+   #plot(m1, add = TRUE)        # adds fitted broken-stick line
+   #abline(v = bp_lo, lty = 2)
+   
+   # add breakpoint CI “bars” on the plot (handy)
+   #lines(m1, term = "motif_match_score_scaled")
+   
+   
+   df_linear_conservative=df_linear_conservative %>% mutate(ID=metadata$ID[i]) %>% relocate(ID, .before=Kmer)
+   all_data=rbind(all_data, df_linear_conservative)
+   
+   correlation_data$number_of_points[i]=nrow(df_linear_conservative)
    
    #measures linear correlation between two sets of data.
    #the ratio between the covariance of two variables and the product of their standard deviations; 
    #thus, it is essentially a normalized measurement of the covariance, such that the result always has a value between −1 and 1.
-   ct_pearson=cor.test(data$motif_match_score_scaled, data$Corrected_count_scaled, method="pearson", alternative="two.sided")
+   ct_pearson=cor.test(df_linear_conservative$motif_match_score_scaled, df_linear_conservative$Corrected_count_scaled, method="pearson", alternative="two.sided")
    #How strongly two sets of ranks are correlated. Whether k-mers who are high ranking in SELEX counts are also high ranking in motif matching
    #A nonparametric measure of rank correlation (statistical dependence between the rankings of two variables). 
    #It assesses how well the relationship between two variables can be described using a monotonic function.
-   ct_spearman=cor.test(data$motif_match_score_scaled, data$Corrected_count_scaled, method="spearman", alternative="two.sided")
+   ct_spearman=cor.test(df_linear_conservative$motif_match_score_scaled, df_linear_conservative$Corrected_count_scaled, method="spearman", alternative="two.sided")
    #a statistic used to measure the ordinal association between two measured quantities.
-   ct_kendall=cor.test(data$motif_match_score_scaled, data$Corrected_count_scaled, method="kendall", alternative="two.sided")
+   ct_kendall=cor.test(df_linear_conservative$motif_match_score_scaled, df_linear_conservative$Corrected_count_scaled, method="kendall", alternative="two.sided")
    
    correlation_data$pearson_estimate[i]=as.numeric(ct_pearson$estimate)
    correlation_data$spearman_estimate[i]=as.numeric(ct_spearman$estimate)
@@ -79,10 +130,29 @@ for(i in 1:nrow(metadata)){
    correlation_data$spearman_pvalue[i]=as.numeric(ct_spearman$p.value)
    correlation_data$kendall_pvalue[i]=as.numeric(ct_kendall$p.value)
    
-   p=ggscatter(data, x = "motif_match_score_scaled", y = "Corrected_count_scaled", 
-             add = "reg.line", conf.int = TRUE, 
-             cor.coef = TRUE, cor.method = "spearman",
-             xlab = "Scaled motif match score", ylab = "Scaled k-mer count score")
+   
+   p <- ggscatter(
+     data, x = "motif_match_score_scaled", y = "Corrected_count_scaled",
+     xlab = "Scaled motif match score",
+     ylab = "Scaled k-mer count score"
+   ) +
+     # vertical line at breakpoint (optional)
+     geom_vline(xintercept = bp_lo, linetype = 2) +
+     # regression line fit ONLY on x >= bp
+     geom_smooth(
+       data = df_linear_conservative,
+       aes(x = .data[["motif_match_score_scaled"]], y = .data[["Corrected_count_scaled"]]),
+       method = "lm",
+       se = TRUE
+     ) +
+     # correlation computed ONLY on x >= bp
+     stat_cor(
+       data = df_linear_conservative,
+       aes(x = .data[["motif_match_score_scaled"]], y = .data[["Corrected_count_scaled"]]),
+       method = "pearson"
+     )
+   
+  
    ggsave(
      filename = paste0(figure_path, metadata$ID[i], ".pdf"),
      plot = p,
@@ -94,20 +164,20 @@ for(i in 1:nrow(metadata)){
 
 
 
-saveRDS(correlation_data, "/scratch/project_2013895/SELEX/RData/correlation_between_motif_match_scores_and_count_scores_correlations.RDS")
+saveRDS(correlation_data, "/scratch/project_2013895/SELEX/RData/constrained_data_correlation_between_motif_match_scores_and_count_scores_correlations.RDS")
 
-#correlation_data=readRDS("/scratch/project_2013895/SELEX/RData/correlation_between_motif_match_scores_and_count_scores_correlations.RDS")
+#correlation_data=readRDS("/scratch/project_2013895/SELEX/RData/constrained_data_correlation_between_motif_match_scores_and_count_scores_correlations.RDS")
 
-saveRDS(all_data, "/scratch/project_2013895/SELEX/RData/correlation_between_motif_match_scores_and_count_scores_all_data.RDS")
+saveRDS(all_data, "/scratch/project_2013895/SELEX/RData/constrained_data_correlation_between_motif_match_scores_and_count_scores_all_data.RDS")
 
-#all_data=readRDS("/scratch/project_2013895/SELEX/RData/correlation_between_motif_match_scores_and_count_scores_all_data.RDS")
+#all_data=readRDS("/scratch/project_2013895/SELEX/RData/constrained_data_correlation_between_motif_match_scores_and_count_scores_all_data.RDS")
 
 
 #3635-3453
 
 table(!is.na(correlation_data$spearman_estimate))
 #FALSE  TRUE 
-#182  3453
+#183  3452
 
 #1. Fast & simple: plot a random subset
 #You almost never need all 18M points to see the pattern.
@@ -193,9 +263,26 @@ ggsave(
 
 #Plot histogram of pearson correlations
 
-correlation_data=correlation_data %>% filter(!is.na(pearson_estimate)) #3373 left
+correlation_data=correlation_data %>% filter(!is.na(pearson_estimate)) #3452 left
 
 #correlation_data %>% filter(spearman_pvalue<0.05),
+
+png(paste0(figure_path, "number_of_points.png"), width = 2000, height = 2000, res = 300)
+ggplot( correlation_data, aes(x = number_of_points)) +
+  geom_histogram(binwidth = 100, fill = "blue", color = "black") +
+  labs(title = "", x = "Number of points", y = "Frequency") +
+  theme_minimal()
+dev.off()
+
+png(paste0(figure_path, "break_points.png"), width = 2000, height = 2000, res = 300)
+ggplot( correlation_data, aes(x = break_point)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black") + xlim(c(-5,1))+
+  labs(title = "", x = "Break points", y = "Frequency") +
+  theme_minimal()
+dev.off()
+
+test=correlation_data %>% filter(break_point < -1)
+table(correlation_data$break_point < -1)
 png(paste0(figure_path, "spearman_correlations.png"), width = 2000, height = 2000, res = 300)
 ggplot( correlation_data, aes(x = spearman_estimate)) +
   geom_histogram(binwidth = 0.01, fill = "blue", color = "black") +
@@ -203,10 +290,18 @@ ggplot( correlation_data, aes(x = spearman_estimate)) +
   theme_minimal()
 dev.off()
 
+png(paste0(figure_path, "pearson_correlations.png"), width = 2000, height = 2000, res = 300)
+ggplot( correlation_data, aes(x = pearson_estimate)) +
+  geom_histogram(binwidth = 0.01, fill = "blue", color = "black") +
+  labs(title = "", x = "Pearson correlation", y = "Frequency") +
+  theme_minimal()
+dev.off()
 
-correlation_data %>% left_join(metadata %>% select(ID, study), by="ID")
 
-ggplot( correlation_data%>% left_join(metadata %>% select(ID, study), by="ID")
+
+correlation_data %>% left_join(metadata %>% dplyr::select(ID, study), by="ID")
+
+ggplot( correlation_data%>% left_join(metadata %>% dplyr::select(ID, study), by="ID")
 , aes(x = spearman_estimate)) +
   geom_histogram(binwidth = 0.01, fill = "blue", color = "black") + facet_wrap(~study) +
   labs(title = "", x = "Spearman correlation", y = "Frequency") +

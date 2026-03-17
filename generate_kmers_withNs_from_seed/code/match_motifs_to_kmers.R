@@ -33,7 +33,7 @@ metadata=metadata %>% filter(!is.na(seed)) #3635
 metadata=metadata[order(metadata$length),]
 
 
-results_path="/scratch/project_2013895/SELEX/scored_kmers_fixed_N_seeds/"
+results_path="/scratch/project_2013895/SELEX/scored_kmers_fixed_N_seeds/" #3469 successfull
 
 #Filter out those which do not have either SELEX signal or background
 metadata=metadata %>% filter(!(is.na(CSC_SELEX_filename) | is.na(CSC_SELEX_background_filename))) #3573
@@ -79,8 +79,8 @@ if(end_ind > nrow(metadata)){
 path_local_scratch=Sys.getenv("LOCAL_SCRATCH")
 #dir(path_local_scratch)
 
-lambda_path="/scratch/project_2013895/SELEX/spacek/lambda/"
-# ls | wc -l 3573
+lambda_path="/scratch/project_2013895/SELEX/spacek/lambda_2026/"
+# ls | wc -l #3470
 
 #For which motifs lambda fails?
 
@@ -212,7 +212,7 @@ for(index in seq(start_ind, end_ind, 1)){ #0-9
   data=metadata[index,] 
   seed=data$seed
     
-  res <- try(parse_spacek_report(paste0("/scratch/project_2013895/SELEX/spacek/lambda/", data$ID, ".txt")), silent=TRUE)
+  res <- try(parse_spacek_report(paste0("/scratch/project_2013895/SELEX/spacek/lambda_2026/", data$ID, ".txt")), silent=TRUE)
   
   if(class(res)!="try-error"){
     if(!is.na(res$lambda)){
@@ -268,6 +268,10 @@ for(index in seq(start_ind, end_ind, 1)){ #0-9
           
       # I need to score both the k-mer and its reverse complement and take the best score
       # Write kmer and score
+      
+      #TFAP2C_MAX_CAP-SELEX_TTAGTC40NTCC_AY_TNSCCNNNGGSNNNNNNNNNNNNNNCACGTGN_1_3"
+      #TFAP2C_MAX_CAP-SELEX_TTAGTC40NTCC_AY_TNSCCNNNGGSNNNNNNNNNNNNNNCACGTGN_1_3.pfm"
+      #                                     TNSCCNNNGG SNNNNNNNNN NNNNNCACGT GN" #32
       
      kmer_score=data.frame(orig=rep(NA,length(kmer_dna)), rc=rep(NA,length(kmer_dna)))
      kmer_score$orig=sapply(kmer_dna, function(x) score_pssm_expectedN(pssm, as.character(x)))
