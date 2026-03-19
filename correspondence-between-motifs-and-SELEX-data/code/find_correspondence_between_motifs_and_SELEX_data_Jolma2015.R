@@ -14,13 +14,70 @@ test$study %>% table()
 
 data_path="/scratch/project_2013895/SELEX/data/"
 
+#SELEX data was downloaded from ENA in originally submitted format based on the following accession codes: 
+
+# input libraries PRJEB20112
+# Jolma 2013 PRJEB3289 study_accession
+# Jolma 2015 PRJEB7934
+# Morgunova 2015 PRJEB8671
+# Nitta 2015 PRJEB7373
+# Xie 2025 PRJEB66722
+# Yin2017 PRJEB9797
+
 #File names
 
 #Jolma2015: NFATC4_HOXA1_3_AAE_TGAACG40NCAA.fastq.gz
 
-
-metadata_Jolma2015 = metadata %>% filter(study=="Jolma2015")
+metadata_Jolma2015 = metadata %>% filter(study=="Jolma2015" & ID!="PAX3_HT-SELEX_TTAGGG20NGGA_AL_GTCACGCNNMATTAN_1_3" &
+                                          ID!= "NR1I2_HT-SELEX_TACTGG40NGGA_KR_RGTTCRNNNRGTTC_1_4" )
 study="Jolma2015"
+
+ENA_metadata=read_delim("/projappl/project_2013895/SELEX/download-data/experiments/Jolma2015_from_ENA/filereport_read_run_PRJEB7934.tsv", delim="\t")
+ENA_metadata$scientific_name %>% table(useNA="always") #Homo sapiens all? 
+ENA_metadata$library_strategy %>% table(useNA="always") #
+#OTHER SELEX  <NA> 
+#  2 14845     0 
+ENA_metadata$library_source %>% table(useNA="always") #
+#GENOMIC SYNTHETIC      <NA> 
+#  2     14845         0 
+
+ENA_metadata=ENA_metadata %>% filter(library_strategy=="SELEX")
+ENA_metadata$library_selection %>% table(useNA="always") #
+# other  <NA> 
+# 14845     0 
+ENA_metadata$study_alias %>% table(useNA="always") #
+ENA_metadata$sample_alias %>% head()
+ENA_metadata$sample_title %>% head()
+splits=strsplit(ENA_metadata$sample_title, " ")
+sapply(splits, length) %>% table() #Varies
+lengths <- sapply(splits, length)
+table(lengths)
+
+max_len <- max(sapply(splits, length))
+
+# Pad with NAs
+padded <- lapply(splits, function(x) {
+  length(x) <- max_len
+  return(x)
+})
+
+df <- as.data.frame(do.call(rbind, padded), stringsAsFactors = FALSE)
+
+df$V1 %>% table()
+df$V2 %>% table()
+df$V3 %>% table()
+
+df[which(df$V1=="#N/A")]=#HT-SELEX# 
+
+names(df)=c("ENA_experiment", "sample","ENA_symbol")  
+
+ENA_metadata=cbind(ENA_metadata, df[,c(1,3)])
+
+splits=strsplit(ENA_metadata$submitted_ftp, "/")
+sapply(splits, length) %>% table() #All 6
+ENA_metadata$filename=do.call(rbind, splits)[,6]
+ENA_metadata$filename_without_ending=gsub(".fastq.gz", "", ENA_metadata$filename)
+
 
 SELEX_data_filenames=dir(paste0(data_path,study, "/submitted_ftp/"))
 splits <- strsplit(SELEX_data_filenames, "_")
@@ -52,36 +109,40 @@ df$symbol[which(df$TF2!="htSELEX")]=paste0(df$TF1[which(df$TF2!="htSELEX")],"_",
 
 df=df[,c("TF1", "TF2", "symbol","cycle","batch","ligand","filename")]
 
+df$filename_experiment="CAP-SELEX"
+df$filename_experiment[which(df$TF2=="htSELEX")]="HT-SELEX"
 
+ENA_metadata=ENA_metadata %>% left_join(df, by="filename")
+ENA_metadata$csc_filename=paste0(data_path, study,"/submitted_ftp/", ENA_metadata$filename)
+
+table(ENA_metadata$ENA_experiment==ENA_metadata$filename_experiment)
+#FALSE  TRUE 
+#24 14821
+ind=which(ENA_metadata$ENA_experiment!=ENA_metadata$filename_experiment)
+test=ENA_metadata[ind,]
+table(ENA_metadata$ENA_symbol==ENA_metadata$symbol)
+#FALSE  TRUE 
+#4 14817
+ind=which(ENA_metadata$ENA_symbol!=ENA_metadata$symbol)
+test=ENA_metadata[ind,]
 
 # Zero cycle background ---------------------------------------------------
 
-input_library_filenames=dir(paste0(data_path,"input_libraries", "/submitted_ftp/"))
+ENA_metadata_background=read_delim("/projappl/project_2013895/SELEX/download-data/Data/ENA_metadata_input_libraries.tsv", delim="\t")
+ENA_metadata_background$motif_derived_Jolma2015="NO"
+ENA_metadata$csc_filename=paste0(data_path, study,"/submitted_ftp/", ENA_metadata$filename)
+ENA_metadata$motif_derived="NO"
 
-df_input <- as.data.frame(do.call(rbind, strsplit(input_library_filenames, "_")))
+iter_ind=which(!is.na(metadata_Jolma2015$cycle))
 
-df_input$filename=input_library_filenames
-df_input$V1=NULL
-df_input$V3=NULL
-df_input$V4=NULL
-names(df_input)[1]="ligand"
-
-#Remove those with no cycle reported
-# cycle missing: BACH1_HT-SELEX_TTCCCC20NCCC_AL_ATGACTCAT_1_NA
-
-metadata_Jolma2015=metadata_Jolma2015 %>% filter(!is.na(cycle))
-
-
-metadata_Jolma2015$SELEX_filename=NA
-metadata_Jolma2015$SELEX_background_cycle_filename=NA
+metadata_Jolma2015$CSC_SELEX_filename=NA
+metadata_Jolma2015$CSC_SELEX_background_filename=NA
 metadata_Jolma2015$unique_background=FALSE
 metadata_Jolma2015$cycle_background=NA
 
   
-for(i in 1:nrow(metadata_Jolma2015)){
+for(i in iter_ind){
   #i=1
-  #i=which(metadata_Jolma2015$ID=="FOS_HT-SELEX_TGAACT40NAAG_KR_NGATGACGTCATCR_2_4")
-  #i=which(metadata_Jolma2015$ID=="ELF2_HT-SELEX_TGCAAG20NAAC_AL_NAMCCGGAAGTR_1_2")
   print(i)
   symbol=metadata_Jolma2015$symbol[i]
   
@@ -90,7 +151,7 @@ for(i in 1:nrow(metadata_Jolma2015)){
   batch=metadata_Jolma2015$batch[i]
   cycle=metadata_Jolma2015$cycle[i]
   
-  df %>% filter(symbol==.env$symbol)
+  ENA_metadata %>% filter(symbol==.env$symbol)
   cycle_background=NULL
   unique_background=FALSE
   #is cycle on of the strange ones
@@ -124,31 +185,41 @@ for(i in 1:nrow(metadata_Jolma2015)){
   metadata_Jolma2015$unique_background[i]=unique_background
   metadata_Jolma2015$cycle_background[i]=cycle_background
   
-  metadata_Jolma2015$SELEX_filename[i]=paste0(data_path,study, "/submitted_ftp/",
-                                              df %>% filter(symbol==.env$symbol & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle) %>% 
-                                                select(filename)
-                                              )
-  if(cycle_background!=0){
-  metadata_Jolma2015$SELEX_background_cycle_filename[i]=paste0(data_path,study, "/submitted_ftp/",
-                                                             df %>% filter(symbol==.env$symbol & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle_background) %>% select(filename))
-  }else{
-    metadata_Jolma2015$SELEX_background_cycle_filename[i]=paste0(data_path,"input_libraries", "/submitted_ftp/",
-                                                               df_input %>% filter(symbol==.env$symbol & ligand==.env$ligand) %>% select(filename))
+  
+  
+  #Signal
+  if(length(ENA_metadata %>% filter(symbol==.env$symbol & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle) %>% pull(csc_filename))==1){
+    metadata_Jolma2015$CSC_SELEX_filename[i]=ENA_metadata %>% filter(symbol==.env$symbol  & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle) %>% pull(csc_filename)
+    ENA_metadata <- ENA_metadata %>%
+      mutate(
+        motif_derived = if_else(symbol==.env$symbol  & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle, "YES", motif_derived)
+      )
   }
+  
+  #Background
+  if(cycle_background!=0){
+    if(length(ENA_metadata %>% filter(symbol==.env$symbol &  ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle_background) %>% pull(csc_filename))==1){  
+      metadata_Jolma2015$CSC_SELEX_background_filename[i]=ENA_metadata %>% filter(symbol==.env$symbol & experiment==.env$experiment & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle_background) %>% pull(csc_filename)
+      ENA_metadata <- ENA_metadata %>%
+        mutate(
+          motif_derived = if_else(symbol==.env$symbol & experiment==.env$experiment & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle_background, "YES", motif_derived))
+    } 
+  }else{
+    if(length(ENA_metadata_background %>% filter(ligand==.env$ligand) %>% pull(csc_filename))==1){ 
+      metadata_Jolma2015$CSC_SELEX_background_filename[i]=ENA_metadata_background %>% filter(ligand==.env$ligand) %>% pull(csc_filename)
+      
+      ENA_metadata_background <- ENA_metadata_background %>%
+        mutate(
+          motif_derived = if_else(ligand==.env$ligand, "YES", motif_derived),
+          motif_derived_Jolma2015 = if_else(ligand==.env$ligand, "YES", motif_derived_Jolma2015)
+        )
+    }
+  } #background
+  
+  
+  
 }
 
-
-
-
-
-
-
-lookup=c(CSC_SELEX_filename="SELEX_filename",    
-         CSC_SELEX_background_filename="SELEX_background_cycle_filename")
-
-
-metadata_Jolma2015 <- metadata_Jolma2015 %>%
-  rename(all_of(lookup) )
 
 metadata_Jolma2015$Allas_SELEX_filename=gsub("/scratch/project_2013895/SELEX/data/Jolma2015/submitted_ftp/", 
                                              "https://a3s.fi/Jolma2015/", 
@@ -156,115 +227,87 @@ metadata_Jolma2015$Allas_SELEX_filename=gsub("/scratch/project_2013895/SELEX/dat
 
 
 metadata_Jolma2015$Allas_SELEX_background_filename=gsub("/scratch/project_2013895/SELEX/data/Jolma2015/submitted_ftp/", 
-                                             "https://a3s.fi/Jolma2015/", 
-                                             metadata_Jolma2015$CSC_SELEX_background_filename)
+                                                      "https://a3s.fi/Jolma2015/", 
+                                                      metadata_Jolma2015$CSC_SELEX_background_filename)
 
 
-missing_ind=which(str_detect(metadata_Jolma2015$CSC_SELEX_filename, "/character"))
+metadata_Jolma2015$Allas_SELEX_background_filename=gsub("/scratch/project_2013895/SELEX/data/input_libraries/submitted_ftp/", 
+                                                      "https://a3s.fi/input_libraries/", 
+                                                      metadata_Jolma2015$Allas_SELEX_background_filename)
+
+
+#Add also other relevant ENA_metadata info to metadata_Jolm2013
+
+metadata_Jolma2015=metadata_Jolma2015 %>% left_join( ENA_metadata %>% 
+                                                       select(
+                                                         c("run_accession", "study_accession", "secondary_study_accession",
+                                                           "sample_accession", "secondary_sample_accession", "experiment_accession",
+                                                           "submission_accession", "read_count", "base_count","fastq_ftp", "submitted_ftp", "sra_ftp", "csc_filename")
+                                                       ) %>%
+                                                       rename_with(~ paste0(.x, "_signal")), 
+                                                     by=c("CSC_SELEX_filename"="csc_filename_signal"))
+
+metadata_Jolma2015=metadata_Jolma2015 %>% left_join( ENA_metadata %>% 
+                                                       select(
+                                                         c("run_accession", "study_accession", "secondary_study_accession",
+                                                           "sample_accession", "secondary_sample_accession", "experiment_accession",
+                                                           "submission_accession", "read_count", "base_count","fastq_ftp", "submitted_ftp", "sra_ftp", "csc_filename")
+                                                       ) %>%
+                                                       rename_with(~ paste0(.x, "_background")), 
+                                                     by=c("CSC_SELEX_background_filename"="csc_filename_background"))
+
+
+
+missing_ind=which(is.na(metadata_Jolma2015$CSC_SELEX_filename))
 
 
 tmp=metadata_Jolma2015[missing_ind,]
 
-metadata_Jolma2015$CSC_SELEX_filename[missing_ind]=NA
-metadata_Jolma2015$Allas_SELEX_filename[missing_ind]=NA
+tmp$ID
+# [1] "CEBPG_ATF4_CAP-SELEX_TGCGTC40NTTA_AAB_NNATGAYGCAAT_1_3b0" "BACH1_HT-SELEX_TTCCCC20NCCC_AL_ATGACTCAT_1_NA"            "FOS_HT-SELEX_TGAACT40NAAG_KR_NGATGACGTCATCR_2_4"         
+# [4] "FOXA1_HT-SELEX_TTCTAA40NAAT_KN_TRNGTAAACA_1_3b1"          "IRF2_HT-SELEX_TTGCCC40NCTC_AAF_NAANCGAAASYR_1_3"          "NR1D2_HT-SELEX_TGAATT40NTAA_KR_TRGGTYASTAGGTCA_2_3"      
+# [7] "RORB_HT-SELEX_TTCGGG40NGAG_KS_AANTAGGTCAGTAGGTCA_2_4"     "RORB_HT-SELEX_TTCGGG40NGAG_KS_AWNTAGGTCATGACCTANWT_2_4"   "SOX17_HT-SELEX_TATGCT40NACT_KO_ACCGAACAAT_1_4b2"
 
-# CEBPG\_ATF4\_CAP-SELEX\_TGCGTC40NTTA\_AAB\_NNATGAYGCAAT\_1\_3b0 
-# ELF2\_HT-SELEX\_TGCAAG20NAAC\_AL\_NAMCCGGAAGTR\_1\_2          
-# ELF2\_HT-SELEX\_TGCAAG20NAAC\_AL\_NATGCGGAAGTR\_1\_2
-# ETS2\_HT-SELEX\_TAAGTG40NGAA\_AR\_RCCGGAAGTG\_1\_2            
-# ETV7\_HT-SELEX\_TCTGAT40NCTA\_AQ\_NNGCGGAAGTG\_1\_4            
-# ETV7\_HT-SELEX\_TCTGAT40NCTA\_AQ\_NNGGAAGTGCTTCCNN\_2\_4      
-# ETV7\_HT-SELEX\_TCTGAT40NCTA\_AQ\_NNYTTCCGGGAARNR\_1\_4       
-# FOS\_HT-SELEX\_TGAACT40NAAG\_KR\_NGATGACGTCATCR\_2\_4         
-# FOXA1\_HT-SELEX\_TTCTAA40NAAT\_KN\_TRNGTAAACA\_1\_3b1         
-# GATA1\_HT-SELEX\_TGGGTA20NTGT\_AL\_AGATAAN\_1\_2              
-# GLI3\_HT-SELEX\_TACCCG20NCCC\_AN\_NGACCACMCACGWNG\_2\_3      
-# HES1\_HT-SELEX\_TCTTTC20NTTG\_AL\_GNCACGTGNC\_1\_3            
-# HOXA3\_HT-SELEX\_TGTCGT40NGCG\_AL\_NSTAATTANN\_1\_3          
-# HOXA4\_HT-SELEX\_TGACCT40NCCA\_AR\_RTMATTAN\_1\_4             
-# HOXA6\_HT-SELEX\_TCGCCA20NGA\_AN\_SYMATTAN\_1\_3            
-# HOXA7\_HT-SELEX\_TCGCGC20NGA\_AN\_NYMATTAN\_1\_3              
-# HOXD4\_HT-SELEX\_TGGCCC40NCCT\_AR\_NNYMATTANN\_1\_4b0         
-# IRF2\_HT-SELEX\_TTGCCC40NCTC\_AAF\_NAANCGAAASYR\_1\_3         
-# JUN\_HT-SELEX\_TTAGCC20NTA\_AL\_ATGACGTCAT\_1\_3            
-# MYCL2\_HT-SELEX\_TAGCCT40NCCT\_AR\_SCACGTGS\_1\_3             
-# NR1D2\_HT-SELEX\_TGAATT40NTAA\_KR\_TRGGTYASTAGGTCA\_2\_3     
-# NR1I2\_HT-SELEX\_TACTGG40NGGA\_KR\_RGTTCRNNNRGTTC\_1\_4       
-# POU5F1\_HT-SELEX\_TTTAAG40NAGC\_AQ\_NATATGCTAATKN\_1\_3      
-# POU5F1\_HT-SELEX\_TTTAAG40NAGC\_AQ\_WATGCGCATW\_1\_3          
-# RORB\_HT-SELEX\_TTCGGG40NGAG\_KS\_AANTAGGTCAGTAGGTCA\_2\_4   
-# RORB\_HT-SELEX\_TTCGGG40NGAG\_KS\_AWNTAGGTCATGACCTANWT\_2\_4  
-# SOX17\_HT-SELEX\_TATGCT40NACT\_KO\_ACCGAACAAT\_1\_4b2        
-# SOX6\_HT-SELEX\_TTCCAA20NACC\_AL\_CACCGAACAAT\_2\_3           
-# TBX3\_HT-SELEX\_TAAGCC40NAGT\_AR\_AGGTGTNR\_1\_4            
-# TCF15\_HT-SELEX\_TCTTAG40NATG\_AR\_NACAYATGNN\_1\_4           
-# PAX3\_HT-SELEX\_TTAGGG20NGGA\_AL\_GTCACGCNNMATTAN\_1\_3 
-
-
-missing_ind=which(str_detect(metadata_Jolma2015$CSC_SELEX_background_filename, "/character"))
+tmp$symbol
+missing_ind=which(is.na(metadata_Jolma2015$CSC_SELEX_background_filename))
 
 tmp=metadata_Jolma2015[missing_ind,]
 
-metadata_Jolma2015$CSC_SELEX_background_filename[missing_ind]=NA
-metadata_Jolma2015$Allas_SELEX_background_filename[missing_ind]=NA
+tmp$ID #same as above
 
-
-
-#background missing: 
-
-# ELF2\_HT-SELEX\_TGCAAG20NAAC\_AL\_NAMCCGGAAGTR\_1\_2    
-# ELF2\_HT-SELEX\_TGCAAG20NAAC\_AL\_NATGCGGAAGTR\_1\_2        
-# ETS2\_HT-SELEX\_TAAGTG40NGAA\_AR\_RCCGGAAGTG\_1\_2          
-# ETV7\_HT-SELEX\_TCTGAT40NCTA\_AQ\_NNGCGGAAGTG\_1\_4         
-# ETV7\_HT-SELEX\_TCTGAT40NCTA\_AQ\_NNGGAAGTGCTTCCNN\_2\_4     
-# ETV7\_HT-SELEX\_TCTGAT40NCTA\_AQ\_NNYTTCCGGGAARNR\_1\_4     
-# FOS\_HT-SELEX\_TGAACT40NAAG\_KR\_NGATGACGTCATCR\_2\_4      
-# FOXA1\_HT-SELEX\_TTCTAA40NAAT\_KN\_TRNGTAAACA\_1\_3b1       
-# GATA1\_HT-SELEX\_TGGGTA20NTGT\_AL\_AGATAAN\_1\_2          
-# GLI3\_HT-SELEX\_TACCCG20NCCC\_AN\_NGACCACMCACGWNG\_2\_3     
-# HES1\_HT-SELEX\_TCTTTC20NTTG\_AL\_GNCACGTGNC\_1\_3        
-# HOXA3\_HT-SELEX\_TGTCGT40NGCG\_AL\_NSTAATTANN\_1\_3         
-# HOXA4\_HT-SELEX\_TGACCT40NCCA\_AR\_RTMATTAN\_1\_4          
-# HOXA6\_HT-SELEX\_TCGCCA20NGA\_AN\_SYMATTAN\_1\_3            
-# HOXA7\_HT-SELEX\_TCGCGC20NGA\_AN\_NYMATTAN\_1\_3           
-# IRF2\_HT-SELEX\_TTGCCC40NCTC\_AAF\_NAANCGAAASYR\_1\_3       
-# JUN\_HT-SELEX\_TTAGCC20NTA\_AL\_ATGACGTCAT\_1\_3           
-# MYCL2\_HT-SELEX\_TAGCCT40NCCT\_AR\_SCACGTGS\_1\_3           
-# NR1D2\_HT-SELEX\_TGAATT40NTAA\_KR\_TRGGTYASTAGGTCA\_2\_3   
-# NR1I2\_HT-SELEX\_TACTGG40NGGA\_KR\_RGTTCRNNNRGTTC\_1\_4     
-# POU5F1\_HT-SELEX\_TTTAAG40NAGC\_AQ\_NATATGCTAATKN\_1\_3     
-# POU5F1\_HT-SELEX\_TTTAAG40NAGC\_AQ\_WATGCGCATW\_1\_3        
-# RORB\_HT-SELEX\_TTCGGG40NGAG\_KS\_AANTAGGTCAGTAGGTCA\_2\_4 
-# RORB\_HT-SELEX\_TTCGGG40NGAG\_KS\_AWNTAGGTCATGACCTANWT\_2\_4
-# SOX17\_HT-SELEX\_TATGCT40NACT\_KO\_ACCGAACAAT\_1\_4b2      
-# SOX6\_HT-SELEX\_TTCCAA20NACC\_AL\_CACCGAACAAT\_2\_3         
-# TBX3\_HT-SELEX\_TAAGCC40NAGT\_AR\_AGGTGTNR\_1\_4           
-# TCF15\_HT-SELEX\_TCTTAG40NATG\_AR\_NACAYATGNN\_1\_4         
-# PAX3\_HT-SELEX\_TTAGGG20NGGA\_AL\_GTCACGCNNMATTAN\_1\_3     
-
-
-
-#missing_ind=which(str_detect(metadata_Jolma2015$CSC_SELEX_ZeroCycle_filename, "/character"))
-#metadata_Jolma2015$CSC_SELEX_ZeroCycle_filename[missing_ind]=NA
-#metadata_Jolma2015$Allas_SELEX_ZeroCycle_filename[missing_ind]=NA
-
-metadata_Jolma2015 %>% filter(is.na(CSC_SELEX_filename)) %>% pull(ID)
-
+#For which symbols, the motif was derived
+symbols_with_data=ENA_metadata %>% filter(motif_derived=="YES") %>% pull(symbol) %>% unique()
+#For which symbols, motif was not derived
+symbols_without_data=ENA_metadata %>% filter(motif_derived=="NO") %>% pull(symbol) %>% unique()
+symbols_without_data[!which(symbols_without_data %in% symbols_with_data)]
 
 tmp = metadata_Jolma2015 %>% 
-  select(ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle,cycle_background, unique_background, seed,CSC_SELEX_filename, 
+  select(ID,motif_ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle,cycle_background, unique_background,seed,CSC_SELEX_filename, 
          CSC_SELEX_background_filename, Allas_SELEX_filename, 
-         Allas_SELEX_background_filename)
+         Allas_SELEX_background_filename, 
+         run_accession_signal,                 
+         study_accession_signal,               secondary_study_accession_signal,      sample_accession_signal,              
+         secondary_sample_accession_signal,     experiment_accession_signal,           submission_accession_signal,
+         read_count_signal, base_count_signal,
+         fastq_ftp_signal,                      submitted_ftp_signal,                  sra_ftp_signal,                       
+         run_accession_background,              study_accession_background,            secondary_study_accession_background, 
+         sample_accession_background,           secondary_sample_accession_background, experiment_accession_background,      
+         submission_accession_background,       read_count_background, base_count_background,fastq_ftp_background,                  submitted_ftp_background,             
+         sra_ftp_background                   )
 
   
 write_delim(tmp,"/projappl/project_2013895/motif_metadata/metadata_Jolma2015.tsv",
+            delim="\t")
+
+#write ENA_background file
+write_delim(ENA_metadata_background,"/projappl/project_2013895/SELEX/download-data/Data/ENA_metadata_input_libraries.tsv",
             delim="\t")
 
 
 
 #Are the SELEX data listed several times
 
-metadata_Jolma2015$CSC_SELEX_filename %>% unique() %>% length() #328
+metadata_Jolma2015$CSC_SELEX_filename %>% unique() %>% length() #345
 
 metadata_Jolma2015 %>% nrow() #592
 

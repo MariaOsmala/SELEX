@@ -21,6 +21,32 @@ data_path="/scratch/project_2013895/SELEX/data/"
 metadata_Xie2025 = metadata %>% filter(study=="Xie2025")
 study="Xie2025"
 
+ENA_metadata=read_delim("/projappl/project_2013895/SELEX/download-data/experiments/Xie2025_from_ENA/filereport_read_run_PRJEB66722.tsv", delim="\t")
+ENA_metadata$scientific_name %>% table(useNA="always") #Homo sapiens all? 
+ENA_metadata$library_strategy %>% table(useNA="always") #
+ENA_metadata$library_source %>% table(useNA="always") #
+ENA_metadata$library_selection %>% table(useNA="always") #
+ENA_metadata$study_accession %>% unique()
+ENA_metadata$sample_alias %>% head()
+ENA_metadata$sample_title %>% head()
+splits=strsplit(ENA_metadata$sample_title, " ")
+df <- as.data.frame(do.call(rbind, splits), stringsAsFactors = FALSE)
+
+df$V1 %>% table()
+df$V2 %>% table()
+df$V3 %>% table()
+
+names(df)=c("ENA_experiment", "sample","ENA_symbol")  
+
+ENA_metadata=cbind(ENA_metadata, df[,c(1,3)])
+
+splits=strsplit(ENA_metadata$submitted_ftp, "/")
+sapply(splits, length) %>% table() #All 6
+ENA_metadata$filename=do.call(rbind, splits)[,6]
+ENA_metadata$filename_without_ending=gsub(".fastq.gz", "", ENA_metadata$filename)
+
+ENA_metadata=ENA_metadata %>% filter(ENA_experiment=="CAP-SELEX")
+
 SELEX_data_filenames=dir(paste0(data_path,study, "/submitted_ftp/"))
 splits <- strsplit(SELEX_data_filenames, "_")
 lengths <- sapply(splits, length)
@@ -40,23 +66,33 @@ df$symbol[which(df$TF1!=df$TF2)]=paste0(df$TF1[which(df$TF1!=df$TF2)],"_", df$TF
 
 df=df[,c("TF1", "TF2", "symbol","cycle","batch","ligand","filename")]
 
+ENA_metadata=ENA_metadata %>% left_join(df, by="filename")
+ENA_metadata$csc_filename=paste0(data_path, study,"/submitted_ftp/", ENA_metadata$filename)
+
+
+table(ENA_metadata$ENA_symbol==ENA_metadata$symbol)
+#FALSE  TRUE 
+#88 14817
+#There is some issue with sample_alias and sample_title
+ind=which(ENA_metadata$ENA_symbol!=ENA_metadata$symbol)
+test=ENA_metadata[ind,names(ENA_metadata) %in% c("experiment_title", "experiment_alias","sample_alias", "sample_title","ENA_experiment", "ENA_symbol", "filename", "filename_without_ending","TF1","TF2",
+                        "symbol", "cycle","batch",  "ligand", "csc_filename") ]
+
+
+
+
 # Zero cycle background ---------------------------------------------------
 
-input_library_filenames=dir(paste0(data_path,"input_libraries", "/submitted_ftp/"))
-
-df_input <- as.data.frame(do.call(rbind, strsplit(input_library_filenames, "_")))
-
-df_input$filename=input_library_filenames
-df_input$V1=NULL
-df_input$V3=NULL
-df_input$V4=NULL
-names(df_input)[1]="ligand"
+ENA_metadata_background=read_delim("/projappl/project_2013895/SELEX/download-data/Data/ENA_metadata_input_libraries.tsv", delim="\t")
+ENA_metadata_background$motif_derived_Xie2025="NO"
+ENA_metadata$csc_filename=paste0(data_path, study,"/submitted_ftp/", ENA_metadata$filename)
+ENA_metadata$motif_derived="NO"
 
 metadata_Xie2025$cycle %>% table() #This is always 3
 
 
-metadata_Xie2025$SELEX_filename=NA
-metadata_Xie2025$SELEX_background_filename=NA
+metadata_Xie2025$CSC_SELEX_filename=NA
+metadata_Xie2025$CSC_SELEX_background_filename=NA
 metadata_Xie2025$unique_background=FALSE
 metadata_Xie2025$cycle_background=0
 
@@ -70,33 +106,37 @@ for(i in 1:nrow(metadata_Xie2025)){
   batch=metadata_Xie2025$batch[i]
   cycle=as.numeric(metadata_Xie2025$cycle[i])
   
-  df %>% filter(symbol==.env$symbol)
+  ENA_metadata %>% filter(symbol==.env$symbol)
   
 
-  metadata_Xie2025$SELEX_filename[i]=paste0(data_path,study, "/submitted_ftp/",
-                                              df %>% filter(symbol==.env$symbol & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle) %>% 
-                                                select(filename)
-                                              )
+ 
   
-  metadata_Xie2025$SELEX_background_filename[i]=paste0(data_path,"input_libraries", "/submitted_ftp/",
-                                                               df_input %>% filter(symbol==.env$symbol & ligand==.env$ligand) %>% select(filename))
+  
+  
+  #Signal
+  if(length(ENA_metadata %>% filter(symbol==.env$symbol & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle) %>% pull(csc_filename))==1){
+    metadata_Xie2025$CSC_SELEX_filename[i]=ENA_metadata %>% filter(symbol==.env$symbol  & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle) %>% pull(csc_filename)
+    ENA_metadata <- ENA_metadata %>%
+      mutate(
+        motif_derived = if_else(symbol==.env$symbol  & ligand==.env$ligand & batch==.env$batch & cycle==.env$cycle, "YES", motif_derived)
+      )
+  }
+  
+
+    if(length(ENA_metadata_background %>% filter(ligand==.env$ligand) %>% pull(csc_filename))==1){ 
+      metadata_Xie2025$CSC_SELEX_background_filename[i]=ENA_metadata_background %>% filter(ligand==.env$ligand) %>% pull(csc_filename)
+      
+      ENA_metadata_background <- ENA_metadata_background %>%
+        mutate(
+          motif_derived = if_else(ligand==.env$ligand, "YES", motif_derived),
+          motif_derived_Xie2025 = if_else(ligand==.env$ligand, "YES", motif_derived_Xie2025)
+        )
+    }
   
 }
 
 
 
-
-
-
-
-
-lookup=c(CSC_SELEX_filename="SELEX_filename",    
-         CSC_SELEX_background_filename="SELEX_background_filename")
-
-
-
-metadata_Xie2025 <- metadata_Xie2025 %>%
-  rename(all_of(lookup) )
 
 metadata_Xie2025$Allas_SELEX_filename=gsub("/scratch/project_2013895/SELEX/data/Xie2025/submitted_ftp/", 
                                              "https://a3s.fi/Xie2025/", 
@@ -107,8 +147,32 @@ metadata_Xie2025$Allas_SELEX_background_filename=gsub("/scratch/project_2013895/
                                              "https://a3s.fi/Xie2025/", 
                                              metadata_Xie2025$CSC_SELEX_background_filename)
 
+metadata_Xie2025$Allas_SELEX_background_filename=gsub("/scratch/project_2013895/SELEX/data/input_libraries/submitted_ftp/", 
+                                                        "https://a3s.fi/input_libraries/", 
+                                                        metadata_Xie2025$Allas_SELEX_background_filename)
 
-missing_ind=which(str_detect(metadata_Xie2025$CSC_SELEX_filename, "/character"))
+metadata_Xie2025=metadata_Xie2025 %>% left_join( ENA_metadata %>% 
+                                                       select(
+                                                         c("run_accession", "study_accession", "secondary_study_accession",
+                                                           "sample_accession", "secondary_sample_accession", "experiment_accession",
+                                                           "submission_accession", "read_count", "base_count","fastq_ftp", "submitted_ftp", "sra_ftp", "csc_filename")
+                                                       ) %>%
+                                                       rename_with(~ paste0(.x, "_signal")), 
+                                                     by=c("CSC_SELEX_filename"="csc_filename_signal"))
+
+metadata_Xie2025=metadata_Xie2025 %>% left_join( ENA_metadata %>% 
+                                                       select(
+                                                         c("run_accession", "study_accession", "secondary_study_accession",
+                                                           "sample_accession", "secondary_sample_accession", "experiment_accession",
+                                                           "submission_accession", "read_count", "base_count","fastq_ftp", "submitted_ftp", "sra_ftp", "csc_filename")
+                                                       ) %>%
+                                                       rename_with(~ paste0(.x, "_background")), 
+                                                     by=c("CSC_SELEX_background_filename"="csc_filename_background"))
+
+
+metadata_Xie2025$study_accession_signal %>% unique()
+
+missing_ind=which(is.na(metadata_Xie2025$CSC_SELEX_filename))
 tmp=metadata_Xie2025[missing_ind,]
 
 # VSX2\_TBX6\_TTTCGG40NAGA\_YAAII\_NAGGTGTTAATTN\_1\_3  
@@ -125,18 +189,14 @@ tmp=metadata_Xie2025[missing_ind,]
 # TCF23\_TGTTTA40NACG\_YT\_NGCCATTTGGTN\_1\_3          
 # THHEX\_TCGAG40NCATT\_YT\_NCAATTNNNNNNNNNNAATTGN\_1\_3
 
-metadata_Xie2025$CSC_SELEX_filename[missing_ind]=NA
-metadata_Xie2025$Allas_SELEX_filename[missing_ind]=NA
 
-missing_ind=which(str_detect(metadata_Xie2025$CSC_SELEX_background_filename, "/character"))
+
+missing_ind=which(is.na(metadata_Xie2025$CSC_SELEX_background_filename))
 
 tmp=metadata_Xie2025[missing_ind,]
 #tmp$ID
 
 #"THHEX_TCGAG40NCATT_YT_NCAATTNNNNNNNNNNAATTGN_1_3"
-
-metadata_Xie2025$CSC_SELEX_background_filename[missing_ind]=NA
-metadata_Xie2025$Allas_SELEX_background_filename[missing_ind]=NA
 
 metadata_Xie2025 %>% filter(is.na(CSC_SELEX_filename)) %>% pull(ID)
 
@@ -146,16 +206,33 @@ metadata_Xie2025 %>% filter(is.na(CSC_SELEX_filename)) %>% pull(ID)
 # "OTP_TAGATG40NTAT_YPIII_NTAATTRNNNNTAATTRN_1_3"    "SOX11_TAGCCC40NGTA_YT_NACAATNNNNATTGTN_1_3"       "TCF23_TGTTTA40NACG_YT_NGCCATTTGGTN_1_3"          
 # "THHEX_TCGAG40NCATT_YT_NCAATTNNNNNNNNNNAATTGN_1_3"
 
+#For which symbols, the motif was derived
+symbols_with_data=ENA_metadata %>% filter(motif_derived=="YES") %>% pull(symbol) %>% unique()
+#For which symbols, motif was not derived
+symbols_without_data=ENA_metadata %>% filter(motif_derived=="NO") %>% pull(symbol) %>% unique()
+symbols_without_data[!which(symbols_without_data %in% symbols_with_data)]
+
+
 tmp = metadata_Xie2025 %>% 
-  select(ID,symbol,clone,Lambert2018_families,experiment, ligand, batch,cycle, cycle_background, unique_background,seed,CSC_SELEX_filename, 
-         CSC_SELEX_background_filename,
-         Allas_SELEX_filename, 
-         Allas_SELEX_background_filename)
+  select(ID,motif_ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle,cycle_background, unique_background,seed,CSC_SELEX_filename, 
+         CSC_SELEX_background_filename, Allas_SELEX_filename, 
+         Allas_SELEX_background_filename, 
+         run_accession_signal,                 
+         study_accession_signal,               secondary_study_accession_signal,      sample_accession_signal,              
+         secondary_sample_accession_signal,     experiment_accession_signal,           submission_accession_signal,
+         read_count_signal, base_count_signal,
+         fastq_ftp_signal,                      submitted_ftp_signal,                  sra_ftp_signal,                       
+         run_accession_background,              study_accession_background,            secondary_study_accession_background, 
+         sample_accession_background,           secondary_sample_accession_background, experiment_accession_background,      
+         submission_accession_background,       read_count_background, base_count_background,fastq_ftp_background,                  submitted_ftp_background,             
+         sra_ftp_background                   )
 
   
 write_delim(tmp,"/projappl/project_2013895/motif_metadata/metadata_Xie2025.tsv",
             delim="\t")
-
+#write ENA_background file
+write_delim(ENA_metadata_background,"/projappl/project_2013895/SELEX/download-data/Data/ENA_metadata_input_libraries.tsv",
+            delim="\t")
 
 metadata_Xie2025$CSC_SELEX_filename %>% unique() %>% length() #1087
 

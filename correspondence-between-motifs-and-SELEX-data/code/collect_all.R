@@ -4,12 +4,12 @@ library("tidyverse")
 library("stringr")
 
 rm(list=ls())
-source("find_correspondence_between_motifs_and_SELEX_data_Jolma2013.R") 
-source("find_correspondence_between_motifs_and_SELEX_data_Nitta2015.R")
-source("find_correspondence_between_motifs_and_SELEX_data_Jolma2015.R")
-source("find_correspondence_between_motifs_and_SELEX_data_Morgunova2015.R")
-source("find_correspondence_between_motifs_and_SELEX_data_Yin2017.R")
-source("find_correspondence_between_motifs_and_SELEX_data_Xie2025.R")
+source("find_correspondence_between_motifs_and_SELEX_data_Jolma2013.R") #OK
+source("find_correspondence_between_motifs_and_SELEX_data_Morgunova2015.R") #OK
+source("find_correspondence_between_motifs_and_SELEX_data_Nitta2015.R") #OK
+source("find_correspondence_between_motifs_and_SELEX_data_Yin2017.R") #OK
+source("find_correspondence_between_motifs_and_SELEX_data_Jolma2015.R") #OK
+source("find_correspondence_between_motifs_and_SELEX_data_Xie2025.R") #OK
 
 # Jolma2013 ---------------------------------------------------------------
 
@@ -60,6 +60,7 @@ Nitta2015$study="Nitta2015"
 
 Nitta2015%>% filter(is.na(Allas_SELEX_filename)) %>% pull(ID)
 Nitta2015%>% filter(is.na(Allas_SELEX_background_filename)) %>% pull(ID)
+#"SREBF2_HT-SELEX_TGAGAT20NGA_Y_NRTCACGCCAYN_1_3"      "ONECUT2_HT-SELEX_TGGGCG30NCGT_AH_NNCGATCRATAWNN_1_2" "ONECUT1_HT-SELEX_TAGCTC20NTCT_Y_CRATCRATAWN_1_3"  
 
 
 # Jolma2015 ---------------------------------------------------------------
@@ -73,22 +74,9 @@ Jolma2015$study="Jolma2015"
 Jolma2015%>% filter(is.na(Allas_SELEX_filename)) %>% pull(ID)
 Jolma2015%>% filter(is.na(Allas_SELEX_background_filename)) %>% pull(ID)
 
-# "CEBPG_ATF4_CAP-SELEX_TGCGTC40NTTA_AAB_NNATGAYGCAAT_1_3b0" "ELF2_HT-SELEX_TGCAAG20NAAC_AL_NAMCCGGAAGTR_1_2"          
-# "ELF2_HT-SELEX_TGCAAG20NAAC_AL_NATGCGGAAGTR_1_2"           "ETS2_HT-SELEX_TAAGTG40NGAA_AR_RCCGGAAGTG_1_2"            
-# "ETV7_HT-SELEX_TCTGAT40NCTA_AQ_NNGCGGAAGTG_1_4"            "ETV7_HT-SELEX_TCTGAT40NCTA_AQ_NNGGAAGTGCTTCCNN_2_4"      
-# "ETV7_HT-SELEX_TCTGAT40NCTA_AQ_NNYTTCCGGGAARNR_1_4"        "FOS_HT-SELEX_TGAACT40NAAG_KR_NGATGACGTCATCR_2_4"         
-# "FOXA1_HT-SELEX_TTCTAA40NAAT_KN_TRNGTAAACA_1_3b1"          "GATA1_HT-SELEX_TGGGTA20NTGT_AL_AGATAAN_1_2"              
-# "GLI3_HT-SELEX_TACCCG20NCCC_AN_NGACCACMCACGWNG_2_3"        "HES1_HT-SELEX_TCTTTC20NTTG_AL_GNCACGTGNC_1_3"            
-# "HOXA3_HT-SELEX_TGTCGT40NGCG_AL_NSTAATTANN_1_3"            "HOXA4_HT-SELEX_TGACCT40NCCA_AR_RTMATTAN_1_4"             
-# "HOXA6_HT-SELEX_TCGCCA20NGA_AN_SYMATTAN_1_3"               "HOXA7_HT-SELEX_TCGCGC20NGA_AN_NYMATTAN_1_3"              
-# "HOXD4_HT-SELEX_TGGCCC40NCCT_AR_NNYMATTANN_1_4b0"          "IRF2_HT-SELEX_TTGCCC40NCTC_AAF_NAANCGAAASYR_1_3"         
-# "JUN_HT-SELEX_TTAGCC20NTA_AL_ATGACGTCAT_1_3"               "MYCL2_HT-SELEX_TAGCCT40NCCT_AR_SCACGTGS_1_3"             
-# "NR1D2_HT-SELEX_TGAATT40NTAA_KR_TRGGTYASTAGGTCA_2_3"       "NR1I2_HT-SELEX_TACTGG40NGGA_KR_RGTTCRNNNRGTTC_1_4"       
-# "POU5F1_HT-SELEX_TTTAAG40NAGC_AQ_NATATGCTAATKN_1_3"        "POU5F1_HT-SELEX_TTTAAG40NAGC_AQ_WATGCGCATW_1_3"          
-# "RORB_HT-SELEX_TTCGGG40NGAG_KS_AANTAGGTCAGTAGGTCA_2_4"     "RORB_HT-SELEX_TTCGGG40NGAG_KS_AWNTAGGTCATGACCTANWT_2_4"  
-# "SOX17_HT-SELEX_TATGCT40NACT_KO_ACCGAACAAT_1_4b2"          "SOX6_HT-SELEX_TTCCAA20NACC_AL_CACCGAACAAT_2_3"           
-# "TBX3_HT-SELEX_TAAGCC40NAGT_AR_AGGTGTNR_1_4"               "TCF15_HT-SELEX_TCTTAG40NATG_AR_NACAYATGNN_1_4"           
-# "PAX3_HT-SELEX_TTAGGG20NGGA_AL_GTCACGCNNMATTAN_1_3"  
+# [1] "CEBPG_ATF4_CAP-SELEX_TGCGTC40NTTA_AAB_NNATGAYGCAAT_1_3b0" "BACH1_HT-SELEX_TTCCCC20NCCC_AL_ATGACTCAT_1_NA"            "FOS_HT-SELEX_TGAACT40NAAG_KR_NGATGACGTCATCR_2_4"         
+# [4] "FOXA1_HT-SELEX_TTCTAA40NAAT_KN_TRNGTAAACA_1_3b1"          "IRF2_HT-SELEX_TTGCCC40NCTC_AAF_NAANCGAAASYR_1_3"          "NR1D2_HT-SELEX_TGAATT40NTAA_KR_TRGGTYASTAGGTCA_2_3"      
+# [7] "RORB_HT-SELEX_TTCGGG40NGAG_KS_AANTAGGTCAGTAGGTCA_2_4"     "RORB_HT-SELEX_TTCGGG40NGAG_KS_AWNTAGGTCATGACCTANWT_2_4"   "SOX17_HT-SELEX_TATGCT40NACT_KO_ACCGAACAAT_1_4b2"
 
 
 # Xie2025 -----------------------------------------------------------------
@@ -110,32 +98,61 @@ Xie2025%>% filter(is.na(Allas_SELEX_background_filename)) %>% pull(ID)
 
 # Combine all -------------------------------------------------------------
 
-SELEX_data_for_motifs=rbind(Jolma2013, Jolma2015, Morgunova2015, Nitta2015, Yin2017, Xie2025) #3635
+Jolma2013$cycle=as.character(Jolma2013$cycle)
+Jolma2015$cycle=as.character(Jolma2015$cycle)
+Morgunova2015$cycle=as.character(Morgunova2015$cycle) #THis is not a SELEX motif, do not add
+Nitta2015$cycle=as.character(Nitta2015$cycle)
+Yin2017$cycle=as.character(Yin2017$cycle)
+Xie2025$cycle=as.character(Xie2025$cycle)
+
+SELEX_data_for_motifs=dplyr::bind_rows(Jolma2013, Jolma2015, Nitta2015, Yin2017, Xie2025) #3635
 
 #For how many there are both SELEX signal and background signal
 
-SELEX_data_for_motifs %>% filter(!is.na(CSC_SELEX_filename) & !is.na(CSC_SELEX_background_filename)) %>% nrow() #3594
+SELEX_data_for_motifs %>% filter(!is.na(CSC_SELEX_filename) & !is.na(CSC_SELEX_background_filename)) %>% nrow() #3596
 
 tmp=SELEX_data_for_motifs %>% filter(!is.na(CSC_SELEX_filename) & !is.na(CSC_SELEX_background_filename))
-
-#rename background names in Allas
-
-tmp$Allas_SELEX_background_filename[grep("input_libraries", tmp$Allas_SELEX_background_filename)]=gsub("/scratch/project_2013895/SELEX/data/input_libraries/submitted_ftp/",
-     "https://a3s.fi/input_libraries/", tmp$Allas_SELEX_background_filename[grep("input_libraries", tmp$Allas_SELEX_background_filename)])
-
+tmp$study=NULL
 #write_delim(tmp, "/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background.tsv", delim="\t")
-write_delim(tmp, "/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_06102025.tsv", delim="\t")
+#write_delim(tmp, "/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_06102025.tsv", delim="\t") #3594
+write_delim(tmp, "/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_19032026.tsv", delim="\t") #3596
 
 
 # Add the info to the metadata --------------------------------------------
 
 metadata=read_delim("/projappl/project_2013895/motif_metadata/metadata_final.tsv")
 
+setdiff(names(metadata), names(tmp))
+setdiff(names(tmp), names(metadata))
+
 metadata_combined=metadata %>% left_join(SELEX_data_for_motifs %>% select(ID, cycle_background, unique_background, 
                                                         CSC_SELEX_filename,
                                                         CSC_SELEX_background_filename,
                                                         Allas_SELEX_filename,
-                                                        Allas_SELEX_background_filename), by="ID")
+                                                        Allas_SELEX_background_filename, 
+                                                        run_accession_signal,
+                                                        study_accession_signal,               
+                                                        secondary_study_accession_signal,
+                                                        sample_accession_signal,
+                                                        secondary_sample_accession_signal,
+                                                        experiment_accession_signal,          
+                                                        submission_accession_signal,
+                                                        read_count_signal,
+                                                        base_count_signal,
+                                                        fastq_ftp_signal,                     
+                                                        submitted_ftp_signal, sra_ftp_signal,
+                                                        run_accession_background,
+                                                        study_accession_background,           
+                                                        secondary_study_accession_background,
+                                                        sample_accession_background,
+                                                        secondary_sample_accession_background,
+                                                        experiment_accession_background,
+                                                        submission_accession_background,
+                                                        read_count_background,base_count_background,
+                                                        fastq_ftp_background,                 
+                                                        submitted_ftp_background,
+                                                        sra_ftp_background
+                                                        ), by="ID")
 
 metadata_combined <- metadata_combined %>%
   relocate(cycle_background, .after = cycle)
@@ -146,13 +163,15 @@ metadata_combined <- metadata_combined %>%
 metadata_combined$clone[metadata_combined$study=="Morgunova"]="DBD"
 
 #write_delim(metadata_combined, "/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data.tsv", delim="\t")
-write_delim(metadata_combined, "/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_06102025.tsv", delim="\t")
+#write_delim(metadata_combined, "/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_06102025.tsv", delim="\t")
+write_delim(metadata_combined, "/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_19032026.tsv", delim="\t")
 
 
 missing=metadata_combined %>% filter(experiment!="Methyl-HT-SELEX") %>% filter(is.na(CSC_SELEX_filename)| is.na(CSC_SELEX_background_filename)) %>% 
   select(ID, study, experiment, CSC_SELEX_filename, CSC_SELEX_background_filename)
 
 #write_delim(missing, "/projappl/project_2013895/motif_metadata/motifs_with_missing_SELEX_data.tsv", delim="\t")
-write_delim(missing, "/projappl/project_2013895/motif_metadata/motifs_with_missing_SELEX_data_06102025.tsv", delim="\t")
+#write_delim(missing, "/projappl/project_2013895/motif_metadata/motifs_with_missing_SELEX_data_06102025.tsv", delim="\t") # 41 missing
+write_delim(missing, "/projappl/project_2013895/motif_metadata/motifs_with_missing_SELEX_data_19032026.tsv", delim="\t") #39 missing
 
 

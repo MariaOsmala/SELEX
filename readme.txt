@@ -2,9 +2,13 @@ First, try to find the corresponding SELEX signal and background data for each m
 
 correspondence-between-motifs-and-SELEX-data/code/collect_all.R
 
-There are 3636 non Methyl-HT-SELEX motifs, for 3573 (98.3%) of these both signal
-and background are found, missing signal, background or both for 63 (1.7%).
-Missing are listed in /projappl/project_2013895/motif_metadata/motifs_with_missing_SELEX_data.tsv
+There are 3635 non Methyl-HT-SELEX motifs, for 3596 (98.9%) of these both signal
+and background are found, missing signal, background or both for 39 (1.1%).
+Missing are listed in /projappl/project_2013895/motif_metadata/motifs_with_missing_SELEX_data_19032026.tsv
+
+Motifs with SELEX data are in motifs_with_SELEX_signal_and_background_19042026.tsv
+
+Metadata for all 3933 motifs in metadata_final_with_SELEX_data_19032026.tsv
 
 Try to find the protein sequences for each motif
 
