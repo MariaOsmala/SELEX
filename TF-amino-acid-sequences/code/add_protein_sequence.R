@@ -11,23 +11,25 @@ df_motif_info <- read_delim(
 
 df_Jolma2013 <- df_motif_info %>% filter(study == "Jolma2013")
 
+df_Jolma2013=df_Jolma2013 %>% rename(TF1=symbol)
+
 # Replace instances of FL in column clone by "full"
 
 df_Jolma2013 <- df_Jolma2013 %>%
   mutate(`clone` = ifelse(`clone` == "FL", "full", `clone`))
 
 df_Jolma2013 <- df_Jolma2013 %>%
-  mutate(`symbol` = ifelse(
+  mutate(`TF1` = ifelse(
     `clone` == "mouse DBD_mutant_DBD",
-    "Egr1_E410D_FARSDERtoFARSDDR", `symbol`
+    "Egr1_E410D_FARSDERtoFARSDDR", `TF1`
   ))
 
 df_Jolma2013 <- df_Jolma2013 %>%
   mutate(`clone` = ifelse(`clone` == "mouse DBD_mutant_DBD", "DBD", `clone`))
 
 df_Jolma2013 <- df_Jolma2013 %>%
-  mutate(symbol_clone = paste0(symbol, "_", clone)) %>%
-  relocate(symbol_clone, .after = clone)
+  mutate(TF1_clone = paste0(TF1, "_", clone)) %>%
+  relocate(TF1_clone, .after = clone)
 
 
 ## Read protein sequence info ----------------------------------------------
@@ -48,36 +50,59 @@ protein_sequences <- read_excel(
   n_max = 539
 )
 
+# HNGC-name"            "Ensembl id."
+# "amino-acid sequence" "main structural class" "source organism" "clone type (DBD, full)"
+# "production method"  "Clone source"
+
+protein_sequences$`TF1 Classificaton in Vaquerizas et al., 2009` <- NA
+
+# Try to equalise the names
+
+protein_sequences <- protein_sequences %>%
+  rename(`TF1 HNGC` = `HNGC-name`)
+
+protein_sequences <- protein_sequences %>%
+  rename(`TF1 Ensembl_ID` = `Ensembl id.`)
+
+protein_sequences <- protein_sequences %>%
+  rename(`TF1_protein_sequence` = `amino-acid sequence`)
+
+protein_sequences <- protein_sequences %>%
+  rename(`TF1 DOMAIN` = `main structural class`,
+  "TF1 source organism" ="source organism",
+   "TF1 clone type" = "clone type",
+  "TF1 production method"="production method",
+  "TF1 Clone source"="Clone source")
+
 # Correct some protein names
 protein_sequences <- protein_sequences %>%
-  mutate(`HNGC-name` = ifelse(`HNGC-name` == "Trp53", "Tp53", `HNGC-name`))
+  mutate(`TF1 HNGC` = ifelse(`TF1 HNGC` == "Trp53", "Tp53", `TF1 HNGC`))
 
 protein_sequences <- protein_sequences %>%
-  mutate(`HNGC-name` = ifelse(`HNGC-name` == "Trp73", "Tp73", `HNGC-name`))
+  mutate(`TF1 HNGC` = ifelse(`TF1 HNGC` == "Trp73", "Tp73", `TF1 HNGC`))
 
 protein_sequences <- protein_sequences %>%
-  mutate(symbol_clone = paste0(`HNGC-name`, "_", `clone type`))
+  mutate(TF1_clone = paste0(`TF1 HNGC`, "_", `TF1 clone type`))
 
 # Are the protein sequences unique for the same symbol_clone?
-protein_sequences$symbol_clone %>% length() # 538
-protein_sequences$symbol_clone %>%
+protein_sequences$TF1_clone %>% length() # 538
+protein_sequences$TF1_clone %>%
   unique() %>%
   length() # 538
-protein_sequences$`amino-acid sequence` %>%
+protein_sequences$`TF1_protein_sequence` %>%
   unique() %>%
   length() # 534
 
 df_Jolma2013_protein <- df_Jolma2013 %>%
-  left_join(protein_sequences, by = "symbol_clone")
+  left_join(protein_sequences, by = "TF1_clone")
 
 # Did we find protein for all motifs YES!
-df_Jolma2013_protein$`amino-acid sequence` %>%
+df_Jolma2013_protein$`TF1_protein_sequence` %>%
   is.na() %>%
   table(useNA = "always")
 
-
 # Ensembl IDS no not always match and some missing
-(df_Jolma2013_protein$Human_Ensemble_ID == df_Jolma2013_protein$`Ensembl id.`) %>% table(useNA = "always")
+(df_Jolma2013_protein$Human_Ensemble_ID == df_Jolma2013_protein$`TF1 Ensembl_ID`) %>% table(useNA = "always")
 # FALSE  TRUE  <NA>
 #  20   654   146
 
@@ -87,6 +112,12 @@ df_Jolma2013_protein$Human_Ensemble_ID %>%
   table()
 # FALSE  TRUE
 #  674   146
+
+df_Jolma2013_protein %>%
+  filter(is.na(Human_Ensemble_ID) & organism=="Homo_sapiens") %>%
+  pull(TF1) %>% unique()
+# "HINFP1"   "ZNF238"   "ZNF306"   "POU5F1P1" "BHLHB2"   "BHLHB3"   "CART1"    "RAXL1"    "ZNF435"
+
 df_Jolma2013_protein %>%
   filter(is.na(Human_Ensemble_ID)) %>%
   select(organism) %>%
@@ -95,25 +126,7 @@ df_Jolma2013_protein %>%
 # 13          133
 
 names(df_Jolma2013_protein)
-# HNGC-name"            "Ensembl id."
-# "amino-acid sequence" "main structural class" "source organism" "clone type (DBD, full)"
-# "production method"  "Clone source"
 
-df_Jolma2013_protein$`Classificaton in Vaquerizas et al., 2009` <- NA
-
-# Try to equalise the names
-
-df_Jolma2013_protein <- df_Jolma2013_protein %>%
-  rename(`HNGC` = `HNGC-name`)
-
-df_Jolma2013_protein <- df_Jolma2013_protein %>%
-  rename(`Ensembl_ID` = `Ensembl id.`)
-
-df_Jolma2013_protein <- df_Jolma2013_protein %>%
-  rename(`protein_sequence` = `amino-acid sequence`)
-
-df_Jolma2013_protein <- df_Jolma2013_protein %>%
-  rename(`DOMAIN` = `main structural class`)
 
 Jolma2013_protein_sequences_unique <- protein_sequences
 
@@ -121,57 +134,31 @@ Jolma2013_protein_sequences_unique <- protein_sequences
 Jolma2013_protein_sequences <- protein_sequences %>% # 820 x 25
   left_join(df_Jolma2013 %>%
     select(
-      ID, symbol_clone, study, experiment, family, Lambert2018_families,
+      ID, TF1_clone, study, experiment, family, Lambert2018_families,
       ligand, batch, seed, multinomial, cycle, representative, type, comment,
       filename, Methyl.SELEX.Motif.Category, Human_Ensemble_ID
-    ), by = "symbol_clone")
-
-rm(protein_sequences)
-
-Jolma2013_protein_sequences$`Classificaton in Vaquerizas et al., 2009` <- NA
-
-# Try to equalise the names
-
-Jolma2013_protein_sequences <- Jolma2013_protein_sequences %>%
-  rename(`HNGC` = `HNGC-name`)
-
-Jolma2013_protein_sequences <- Jolma2013_protein_sequences %>%
-  rename(`Ensembl_ID` = `Ensembl id.`)
-
-Jolma2013_protein_sequences <- Jolma2013_protein_sequences %>%
-  rename(`protein_sequence` = `amino-acid sequence`)
-
-Jolma2013_protein_sequences <- Jolma2013_protein_sequences %>%
-  rename(`DOMAIN` = `main structural class`)
-
-Jolma2013_protein_sequences_unique <- Jolma2013_protein_sequences_unique %>%
-  rename(`HNGC` = `HNGC-name`)
-
-Jolma2013_protein_sequences_unique <- Jolma2013_protein_sequences_unique %>%
-  rename(`Ensembl_ID` = `Ensembl id.`)
-
-Jolma2013_protein_sequences_unique <- Jolma2013_protein_sequences_unique %>%
-  rename(`protein_sequence` = `amino-acid sequence`)
-
-Jolma2013_protein_sequences_unique <- Jolma2013_protein_sequences_unique %>%
-  rename(`DOMAIN` = `main structural class`)
+    ), by = "TF1_clone")
 
 
-# Jolma2013_protein_sequences %>% select(`DOMAIN`,family, Lambert2018_families) %>% View()
+
+
 
 # Yin 2017 --------------------------------------------------------------
 
 df_Yin2017 <- df_motif_info %>% filter(study == "Yin2017" & experiment == "HT-SELEX")
 df_Yin2017_Methyl <- df_motif_info %>% filter(study == "Yin2017" & experiment == "Methyl-HT-SELEX")
 
+df_Yin2017=df_Yin2017 %>% rename(TF1=symbol)
+df_Yin2017_Methyl=df_Yin2017_Methyl %>% rename(TF1=symbol)
+
 
 df_Yin2017 <- df_Yin2017 %>%
-  mutate(symbol_clone = paste0(symbol, "_", clone)) %>%
-  relocate(symbol_clone, .after = clone)
+  mutate(TF1_clone = paste0(TF1, "_", clone)) %>%
+  relocate(TF1_clone, .after = clone)
 
 df_Yin2017_Methyl <- df_Yin2017_Methyl %>%
-  mutate(symbol_clone = paste0(symbol, "_", clone)) %>%
-  relocate(symbol_clone, .after = clone)
+  mutate(TF1_clone = paste0(TF1, "_", clone)) %>%
+  relocate(TF1_clone, .after = clone)
 
 
 # Table S1 - Sequence information for Proteins (Section A, top)
@@ -193,49 +180,154 @@ protein_sequences <- read_excel("~/projects/SELEX/TF-amino-acid-sequences/Data/a
   sheet = "S1 sequence information", skip = 17, n_max = 1178 - 17
 )
 
+names(protein_sequences)
+
+# Try to equalise the names
+
+protein_sequences <- protein_sequences %>%
+  rename(`TF1 HNGC` = `HNGC`)
+
+protein_sequences <- protein_sequences %>%
+  rename(`TF1 Ensembl_ID` = `Ensembl_ID`)
+
+protein_sequences$`TF1 source organism` <- "human"
+protein_sequences$`TF1 Clone source`=NA
+protein_sequences$`TF1 production method`=NA
+
+protein_sequences <- protein_sequences %>%
+  rename(`TF1 DOMAIN` = `DOMAIN`,
+  `TF1 clone type` = `Clone used`,
+  `TF1 Classificaton in Vaquerizas et al., 2009` = `Classificaton in Vaquerizas et al., 2009`
+    )
+
+
+doubles=names(which(protein_sequences$`TF1 HNGC` %>% table()>1))
+#"GLIS2"  "HOXA10" "MEF2B"  "PBX2"   "SPIB"
+ind=which(protein_sequences$`TF1 HNGC`==doubles[1])
+protein_sequences$`eDBD seuqence`[ind[1]]==protein_sequences$`eDBD seuqence`[ind[2]] #TRUE
+
+protein_sequences$TF1_alternative_Ensembl_ID=NA
+protein_sequences$TF1_alternative_Ensembl_ID[ind[1]]=protein_sequences$`TF1 Ensembl_ID`[ind[2]]
+protein_sequences=protein_sequences[-ind[2],]
+
+
+doubles=names(which(protein_sequences$`TF1 HNGC` %>% table()>1))
+ind=which(protein_sequences$`TF1 HNGC`==doubles[1])
+test=protein_sequences[ind, ]
+
+protein_sequences$`TF1 clone type`[ind[1]]="eDBD; FL"
+protein_sequences$`Full-length sequence`[ind[1]]=protein_sequences$`Full-length sequence`[ind[2]]
+protein_sequences$TF1_alternative_Ensembl_ID[ind[1]]=protein_sequences$`TF1 Ensembl_ID`[ind[2]]
+protein_sequences=protein_sequences[-ind[2],]
+
+doubles=names(which(protein_sequences$`TF1 HNGC` %>% table()>1))
+
+ind=which(protein_sequences$`TF1 HNGC`==doubles[1])
+protein_sequences$`eDBD seuqence`[ind[1]]==protein_sequences$`eDBD seuqence`[ind[2]] #same sequence
+#" RKKIQISRILDQRNRQVTFTKRKFGLMKKAYELSVLCDCEIALIIFNSANRLFQYASTDMDRVLLKYTEYSEPHESRTNTDILEVPQTLKRRGIGLDGPELEPDE"
+#"GRKKIQISRILDQRNRQVTFTKRKFGLMKKAYELSVLCDCEIALIIFNSANRLFQYASTDMDRVLLKYTEYSEPHESRTNTDILEVPQTLKRRGIGLDGPELEPDE"
+protein_sequences$TF1_alternative_Ensembl_ID[ind[2]]=protein_sequences$`TF1 Ensembl_ID`[ind[1]]
+protein_sequences=protein_sequences[-ind[1],]
+
+
+doubles=names(which(protein_sequences$`TF1 HNGC` %>% table()>1))
+
+ind=which(protein_sequences$`TF1 HNGC`==doubles[1])
+protein_sequences$`eDBD seuqence`[ind[1]]==protein_sequences$`eDBD seuqence`[ind[2]] #same sequence
+#" RKKIQISRILDQRNRQVTFTKRKFGLMKKAYELSVLCDCEIALIIFNSANRLFQYASTDMDRVLLKYTEYSEPHESRTNTDILEVPQTLKRRGIGLDGPELEPDE"
+#"GRKKIQISRILDQRNRQVTFTKRKFGLMKKAYELSVLCDCEIALIIFNSANRLFQYASTDMDRVLLKYTEYSEPHESRTNTDILEVPQTLKRRGIGLDGPELEPDE"
+protein_sequences$TF1_alternative_Ensembl_ID[ind[2]]=protein_sequences$`TF1 Ensembl_ID`[ind[1]]
+protein_sequences=protein_sequences[-ind[1],]
+
+
+doubles=names(which(protein_sequences$`TF1 HNGC` %>% table()>1))
+
+ind=which(protein_sequences$`TF1 HNGC`==doubles[1])
+test=protein_sequences[ind, ]
+protein_sequences$`eDBD seuqence`[ind[1]]==protein_sequences$`eDBD seuqence`[ind[2]] #same sequence
+protein_sequences$TF1_alternative_Ensembl_ID[ind[2]]=protein_sequences$`TF1 Ensembl_ID`[ind[1]]
+protein_sequences$`TF1 clone type`[ind[2]]="eDBD; FL"
+protein_sequences=protein_sequences[-ind[1],]
+
+doubles=names(which(protein_sequences$`TF1 HNGC` %>% table()>1))
+
+protein_sequences %>% select(`TF1 Classificaton in Vaquerizas et al., 2009`) %>% table(useNA = "always")
+# Class a
+# Class a, ensembl ID is different
+# Class b
+# Class b, ensembl ID is different
+# Class c
+# Class c, ensembl ID is different
+# Class other
+# Class x
+# Class x, ensembl ID is different
+# Not in Vaquerizas et al list
+# <NA>
+
+splits =strsplit(protein_sequences %>% pull(`TF1 Classificaton in Vaquerizas et al., 2009`), ", ")
+lengths <- sapply(splits, length)
+table(lengths)
+
+max_len <- max(sapply(splits, length))
+
+# Pad with NAs
+padded <- lapply(splits, function(x) {
+  length(x) <- max_len
+  return(x)
+})
+
+comment <- as.data.frame(do.call(rbind, padded), stringsAsFactors = FALSE)
+
+protein_sequences$`TF1 Classificaton in Vaquerizas et al., 2009` <- comment$V1
+protein_sequences$`TF1 Vaquerizas_comment` <- comment$V2
+
 protein_sequences <- protein_sequences %>%
   # Fix the column name typo
-  rename(`eDBD sequence` = `eDBD seuqence`) %>%
-  separate_rows(`Clone used`, sep = ";\\s*") # split into separate rows on ";"
+  rename(`TF1 eDBD sequence` = `eDBD seuqence`,
+  `TF1 Full-length sequence` = `Full-length sequence`
+  ) %>%
+  separate_rows(`TF1 clone type`, sep = ";\\s*") # split into separate rows on ";"
 
 protein_sequences <- protein_sequences %>%
   mutate(
-    `eDBD sequence` = ifelse(`Clone used` == "eDBD", `eDBD sequence`, NA),
-    `Full-length sequence` = ifelse(`Clone used` == "FL", `Full-length sequence`, NA)
+    `TF1 eDBD sequence` = ifelse(`TF1 clone type` == "eDBD", `TF1 eDBD sequence`, NA),
+    `TF1 Full-length sequence` = ifelse(`TF1 clone type` == "FL", `TF1 Full-length sequence`, NA)
   ) %>%
-  mutate(protein_sequence = coalesce(`eDBD sequence`, `Full-length sequence`)) %>%
+  mutate(TF1_protein_sequence = coalesce(`TF1 eDBD sequence`, `TF1 Full-length sequence`)) %>%
   # Optionally remove the original two columns
-  select(-`eDBD sequence`, -`Full-length sequence`)
+  select(-`TF1 eDBD sequence`, -`TF1 Full-length sequence`)
 
 protein_sequences <- protein_sequences %>%
-  mutate(symbol_clone = paste0(`HNGC`, "_", `Clone used`))
+  mutate(TF1_clone = paste0(`TF1 HNGC`, "_", `TF1 clone type`))
+
+
+names(protein_sequences)
 
 # Test for whitespaces in the symbol_clone column
 
-protein_sequences$symbol_clone <- str_replace_all(protein_sequences$symbol_clone, "\\s+", "")
+protein_sequences$TF1_clone <- str_replace_all(protein_sequences$TF1_clone, "\\s+", "")
 
 # There is * is protein sequences? Remove it
-protein_sequences$protein_sequence[grep("\\*", protein_sequences$protein_sequence)]
+protein_sequences$TF1_protein_sequence[grep("\\*", protein_sequences$TF1_protein_sequence)]
 
-protein_sequences$protein_sequence <- gsub("\\*", "", protein_sequences$protein_sequence)
+protein_sequences$TF1_protein_sequence <- gsub("\\*", "", protein_sequences$TF1_protein_sequence)
 
-# which(str_detect(df_Yin2017$symbol_clone, "\\s") )
-# which(str_detect(protein_sequences$symbol_clone, "\\s") )
+# which(str_detect(df_Yin2017$TF1_clone, "\\s") )
+# which(str_detect(protein_sequences$TF1_clone, "\\s") )
 
 
 df_Yin2017_protein <- df_Yin2017 %>%
-  left_join(protein_sequences, by = "symbol_clone", relationship = "many-to-many")
+  left_join(protein_sequences, by = "TF1_clone")
 
-test <- df_Yin2017_protein[df_Yin2017_protein$protein_sequence %>%
+test <- df_Yin2017_protein[df_Yin2017_protein$TF1_protein_sequence %>%
   is.na() %>%
   which(), ]
 
-test %>% select(symbol_clone, Human_Ensemble_ID, Ensembl_ID)
+test %>% select(TF1_clone, Human_Ensemble_ID, `TF1 Ensembl_ID`)
 
-# symbol_clone Human_Ensemble_ID Ensembl_ID
+# TF1_clone Human_Ensemble_ID Ensembl_ID
 #<chr>        <chr>             <chr>
 # 1 SIX2_eDBD    ENSG00000170577   ENSG00000170577                           No eDBD protein, only full
-# 2 SPIB_FL      ENSG00000269404   ENSG00000142539    ENSG00000269404 SPIB   No full protein, only eDBD
 
 # Maybe eDBD and full are the same?
 
@@ -248,79 +340,70 @@ test %>% select(symbol_clone, Human_Ensemble_ID, Ensembl_ID)
 # 7 ZSCAN5A_eDBD ENSG00000131848   NA                 ENSG00000131848 ZSCAN5
 
 
-missing_ind <- df_Yin2017_protein$protein_sequence %>%
+missing_ind <- df_Yin2017_protein$TF1_protein_sequence %>%
   is.na() %>%
   which()
 
-df_Yin2017_protein$symbol[missing_ind]
+df_Yin2017_protein$TF1[missing_ind]
 
 lookup <- c(FOXO3 = "FOXO3A", FOXG1 = "FOXG1B", SKOR1 = "LBXCOR1", ZSCAN5A = "ZSCAN5")
 
 for (i in 1:length(lookup)) {
-  missing_ind <- which(df_Yin2017_protein$symbol == names(lookup[i]))
+  missing_ind <- which(df_Yin2017_protein$TF1 == names(lookup[i]))
 
   # test=df_Yin2017_protein[missing_ind, ]
 
-  df_Yin2017_protein$symbol_clone[missing_ind] <- gsub(names(lookup[i]), lookup[i], df_Yin2017_protein$symbol_clone[missing_ind])
-  df_Yin2017$symbol_clone[missing_ind] <- gsub(names(lookup[i]), lookup[i], df_Yin2017$symbol_clone[missing_ind])
+  df_Yin2017_protein$TF1_clone[missing_ind] <- gsub(names(lookup[i]), lookup[i], df_Yin2017_protein$TF1_clone[missing_ind])
+  df_Yin2017$TF1_clone[missing_ind] <- gsub(names(lookup[i]), lookup[i], df_Yin2017$TF1_clone[missing_ind])
 
   df_Yin2017_protein[missing_ind, ] <- df_Yin2017_protein[missing_ind, 1:ncol(df_Yin2017)] %>%
-    left_join(protein_sequences, by = "symbol_clone", relationship = "many-to-many")
+    left_join(protein_sequences, by = "TF1_clone")
 }
 
-test <- df_Yin2017_protein[df_Yin2017_protein$protein_sequence %>%
+test <- df_Yin2017_protein[df_Yin2017_protein$TF1_protein_sequence %>%
   is.na() %>%
   which(), ]
 
-test %>% select(symbol_clone, Human_Ensemble_ID, Ensembl_ID)
-
+test %>% select(TF1_clone, Human_Ensemble_ID, `TF1 Ensembl_ID`)
+# 1 SIX2_eDBD    ENSG00000170577   ENSG00000170577
 names(df_Yin2017_protein)
-# "Ensembl_ID"  "HNGC"    "Clone used(eDBD   FL)"
-# "DOMAIN"  "Classificaton in Vaquerizas et al., 2009" "protein_sequence"
+# "TF1 Ensembl_ID"                               "TF1 HNGC"                                     "TF1 clone type"
+# "TF1 DOMAIN"                                   "TF1 Classificaton in Vaquerizas et al., 2009" "TF1 source_organism"
+# "TF1 Clone source"                             "TF1 production method"                        "TF1_alternative_Ensembl_ID"
+# "TF1 Vaquerizas_comment"                       "TF1_protein_sequence"
 
-df_Yin2017_protein$`source organism` <- "human"
+#Does df_Jolma2013 and df_Yin2017 have the same columns
 
-df_Yin2017_protein <- df_Yin2017_protein %>%
-  rename(`clone type` = `Clone used`)
+setdiff(names(df_Jolma2013_protein), names(df_Yin2017_protein)) #empty
+setdiff( names(df_Yin2017_protein), names(df_Jolma2013_protein)) #empty
 
-
-df_Yin2017_protein$`production method` <- NA
-df_Yin2017_protein$`Clone source` <- NA
-
+df_Jolma2013_protein$TF1_alternative_Ensembl_ID=NA
+df_Jolma2013_protein$`TF1 Vaquerizas_comment`=NA
 
 # Is there some for which the protein info is missing:
 
-df_Yin2017_protein$protein_sequence %>%
+df_Yin2017_protein$TF1_protein_sequence %>%
   is.na() %>%
   table(useNA = "always")
 # FALSE  TRUE  <NA>
-#  865     2    0
+#  863     1    0
 
 df_Yin2017_protein %>%
-  filter(is.na(protein_sequence)) %>%
-  select(ID, symbol_clone)
-# SIX2_HT-SELEX_TTACTA40NAGG_KV_NCGTATCRYN_1_4    SIX2_eDBD
-# SPIB_HT-SELEX_TTTAGC40NGAC_KV_RAWWGMGGAAGTN_1_2 SPIB_FL
-
-# six_sequence="MSMLPTFGFTQEQVACVCEVLQQGGNIERLGRFLWSLPACEHLHKNESVLKAKAVVAFHRGNFRELYKILESHQFSPHNHAKLQQLWLKAHYIEAEKLRGRPLGAVGKYRVRRKFPLPRSIWDGEETSYCFKEKSRSVLREWYAHNPYPSPREKRELAEATGLTTTQVSNWFKNRRQRDRAAEAKERENNENSNSNSHNPLNGSGKSVLGSSEDEKTPSGTPDHSSSSPALLLSPPPPGLPSLHSLGHPPGPSAVPVPVPGGGGADPLQHHHGLQDSILNPMSANLVDLGS"
-# nchar(six_sequence) #291
-
-# protein_sequences %>% filter(HNGC %in% c("SIX2") & !is.na(protein_sequence)) %>% pull(protein_sequence) == six_sequence
-
-# protein_sequences %>% filter(HNGC %in% c("SPIB") & !is.na(protein_sequence)) %>% pull(protein_sequence, symbol_clone)
+  filter(is.na(TF1_protein_sequence)) %>%
+  select(ID, TF1_clone)
+# SIX2_HT-SELEX_TTACTA40NAGG_KV_NCGTATCRYN_1_4 SIX2_eDBD
 
 # Try to add info to protein sequences (1534    7)
 
-Yin2017_protein_sequences_unique <- protein_sequences
+Yin2017_protein_sequences_unique <- protein_sequences # 1530
 
-
-Yin2017_protein_sequences <- protein_sequences %>% # 1728
+Yin2017_protein_sequences <- protein_sequences %>% # 1724
   left_join(df_Yin2017 %>%
     select(
-      ID, symbol_clone, study, experiment, family, Lambert2018_families,
+      ID, TF1_clone, study, experiment, family, Lambert2018_families,
       ligand, batch, seed, multinomial, cycle, representative, type, comment,
       filename, Methyl.SELEX.Motif.Category, Human_Ensemble_ID
-    ), by = "symbol_clone", relationship = "many-to-many")
+    ), by = "TF1_clone")
 
 
 # How many motifs there are for each protein
@@ -328,114 +411,67 @@ Yin2017_protein_sequences <- protein_sequences %>% # 1728
 
 Yin2017_protein_sequences %>%
   filter(!is.na(ID)) %>%
-  nrow() # 863
+  nrow() # 864
 
 Yin2017_protein_sequences %>%
   filter(!is.na(ID)) %>%
-  pull(symbol_clone) %>%
+  pull(TF1_clone) %>%
   unique() %>%
-  length() # 666
+  length() # 670
 
 tmp <- Yin2017_protein_sequences %>%
   filter(!is.na(ID)) %>%
-  select(HNGC, `Clone used`)
+  select(`TF1 HNGC`, `TF1 clone type`)
 
-paste0(tmp$HNGC, "_", tmp$`Clone used`) %>%
+paste0(tmp$`TF1 HNGC`, "_", tmp$`TF1 clone type`) %>%
   unique() %>%
-  length() # 666
-
-# which(Yin2017_protein_sequences$symbol_clone %>% table(useNA="always") >1 ) %>% names()
-# "GLIS2_eDBD" "MEF2B_eDBD" "PBX2_eDBD"  "SPIB_eDBD"
-
-# Are the protein sequences of these the same
-# "GLIS2_eDBD(yes)" "MEF2B_eDBD (no, take the longer)" "PBX2_eDBD (yes)"  "SPIB_eDBD (yes)"
-
-# Yin2017_protein_sequences %>% filter(symbol_clone=="MEF2B_eDBD") %>%
-#  select(protein_sequence) %>% unique()
-
-# Yin2017_protein_sequences$Ensembl_ID_alternative=NA
-
-# index=which(Yin2017_protein_sequences$symbol_clone %in% c("GLIS2_eDBD","MEF2B_eDBD", "PBX2_eDBD",  "SPIB_eDBD"  ))
-
-# keep_index=index[c(1,3,5,7)]
-# remove_index=index[c(2,4,6,8)]
-
-# Yin2017_protein_sequences$Ensembl_ID_alternative[keep_index]=Yin2017_protein_sequences$Ensembl_ID[remove_index]
-
-# Yin2017_protein_sequences=Yin2017_protein_sequences[-remove_index,]
-
-Yin2017_protein_sequences$`source organism` <- "human"
-
-Yin2017_protein_sequences <- Yin2017_protein_sequences %>%
-  rename(`clone type` = `Clone used`)
-
-Yin2017_protein_sequences$`production method` <- NA
-Yin2017_protein_sequences$`Clone source` <- NA
-
-
-Yin2017_protein_sequences_unique$`source organism` <- "human"
-
-Yin2017_protein_sequences_unique <- Yin2017_protein_sequences_unique %>%
-  rename(`clone type` = `Clone used`)
-
-Yin2017_protein_sequences_unique$`production method` <- NA
-Yin2017_protein_sequences_unique$`Clone source` <- NA
-
-
-# fam=sapply( Yin2017_protein_sequences$`df_Yin2017 %>% ...`, function(x) unique(x$Lambert2018_families))
-#
-# fam[which(sapply(fam, length)==0)]=""
-# Yin2017_protein_sequences$Lambert2018_families=unlist(fam)
-#
-# fam=sapply( Yin2017_protein_sequences$`df_Yin2017 %>% ...`, function(x) unique(x$family))
-#
-# fam[which(sapply(fam, length)==0)]=""
-# Yin2017_protein_sequences$family=unlist(fam)
+  length() # 670
 
 
 setdiff(names(Jolma2013_protein_sequences), names(Yin2017_protein_sequences))
+setdiff(names(Yin2017_protein_sequences), names(Jolma2013_protein_sequences))
 
-Jolma2013_protein_sequences$symbol_clone %in% gsub("eDBD", "DBD", Yin2017_protein_sequences$symbol_clone) %>% table()
+Jolma2013_protein_sequences$TF1_clone %in% gsub("eDBD", "DBD", Yin2017_protein_sequences$TF1_clone) %>% table()
 # FALSE  TRUE
 # 375   445
 
-gsub("eDBD", "DBD", Yin2017_protein_sequences$symbol_clone) %in% Jolma2013_protein_sequences$symbol_clone %>% table()
+gsub("eDBD", "DBD", Yin2017_protein_sequences$TF1_clone) %in% Jolma2013_protein_sequences$TF1_clone %>% table()
 # FALSE  TRUE
-# 1359   369
+# 1357   367
 
 
 # Are the protein sequences same in both studies
 
-match_ind <- match(Jolma2013_protein_sequences$symbol_clone, gsub("eDBD", "DBD", Yin2017_protein_sequences$symbol_clone))
+match_ind <- match(Jolma2013_protein_sequences$TF1_clone, gsub("eDBD", "DBD", Yin2017_protein_sequences$TF1_clone))
 na.ind <- is.na(match_ind)
 
-head(Jolma2013_protein_sequences$symbol_clone[-which(na.ind)], 10)
-head(gsub("eDBD", "DBD", Yin2017_protein_sequences$symbol_clone)[match_ind[-which(na.ind)]], 10)
+head(Jolma2013_protein_sequences$TF1_clone[-which(na.ind)], 10)
+head(gsub("eDBD", "DBD", Yin2017_protein_sequences$TF1_clone)[match_ind[-which(na.ind)]], 10)
 
-(Jolma2013_protein_sequences$protein_sequence[-which(na.ind)] == Yin2017_protein_sequences$protein_sequence[match_ind[-which(na.ind)]]) %>% table(useNA = "always")
+(Jolma2013_protein_sequences$TF1_protein_sequence[-which(na.ind)] == Yin2017_protein_sequences$TF1_protein_sequence[match_ind[-which(na.ind)]]) %>% table(useNA = "always")
 # FALSE  TRUE  <NA>
 # 153   292   0
 
 # Some are, some are not, maybe changes are not big ones
 
-not_equal <- which(!(Jolma2013_protein_sequences$protein_sequence[-which(na.ind)] == Yin2017_protein_sequences$protein_sequence[match_ind[-which(na.ind)]]))
+not_equal <- which(!(Jolma2013_protein_sequences$TF1_protein_sequence[-which(na.ind)] == Yin2017_protein_sequences$TF1_protein_sequence[match_ind[-which(na.ind)]]))
 
-Jolma2013_protein_sequences[which(!na.ind)[not_equal[1]], c("symbol_clone", "protein_sequence")]
-Yin2017_protein_sequences[match_ind[which(!na.ind)][not_equal[1]], c("symbol_clone", "protein_sequence")]
+Jolma2013_protein_sequences[which(!na.ind)[not_equal[1]], c("TF1_clone", "TF1_protein_sequence")]
+Yin2017_protein_sequences[match_ind[which(!na.ind)][not_equal[1]], c("TF1_clone", "TF1_protein_sequence")]
 
 ## Add Vaquerizas classification to Jolma2013 motifs
 
 Vaquerizas_info <- Yin2017_protein_sequences %>%
-  group_by(HNGC) %>%
-  summarise(Va = unique(`Classificaton in Vaquerizas et al., 2009`), .groups = "drop")
+  dplyr::group_by(`TF1 HNGC`) %>%
+  dplyr::summarise(Va = unique(`TF1 Classificaton in Vaquerizas et al., 2009`), .groups = "drop")
 
-match_ind <- match(Jolma2013_protein_sequences$HNGC, Vaquerizas_info$HNGC)
+match_ind <- match(Jolma2013_protein_sequences$`TF1 HNGC`, Vaquerizas_info$`TF1 HNGC`)
 na.ind <- is.na(match_ind)
 
-head(Jolma2013_protein_sequences$HNGC[-which(na.ind)], 50)
-head(Vaquerizas_info$HNGC[match_ind[-which(na.ind)]], 50)
+head(Jolma2013_protein_sequences$`TF1 HNGC`[-which(na.ind)], 50)
+head(Vaquerizas_info$`TF1 HNGC`[match_ind[-which(na.ind)]], 50)
 
-Jolma2013_protein_sequences$`Classificaton in Vaquerizas et al., 2009`[-which(na.ind)] <- Vaquerizas_info$Va[match_ind[-which(na.ind)]]
+Jolma2013_protein_sequences$`TF1 Classificaton in Vaquerizas et al., 2009`[-which(na.ind)] <- Vaquerizas_info$Va[match_ind[-which(na.ind)]]
 
 
 #
@@ -443,98 +479,96 @@ Jolma2013_protein_sequences$ID %>%
   unique() %>%
   length() # 820
 
-nrow(Yin2017_protein_sequences) # 1728
+nrow(Yin2017_protein_sequences) # 1724
 
 Yin2017_protein_sequences$ID %>%
   unique() %>%
-  length() # 861
+  length() # 865
 Yin2017_protein_sequences %>%
   filter(!is.na(ID)) %>%
   pull(ID) %>%
   unique() %>%
-  length() # 860, some missing here
+  length() # 864
 
 # Add Vaqueriza classification to Jolma2013 motifs
-df_Jolma2013_protein$protein_sequence %>%
+df_Jolma2013_protein$TF1_protein_sequence %>%
   is.na() %>%
   table(useNA = "always") # 820 of 820
 
-df_Yin2017_protein$protein_sequence %>%
+df_Yin2017_protein$TF1_protein_sequence %>%
   is.na() %>%
-  table(useNA = "always") # 865. has protein, 2 missing
+  table(useNA = "always") # 863 has protein, 1 missing
 
 df_Jolma2013_protein %>%
-  filter(symbol == "E2F2") %>%
-  select(symbol_clone, protein_sequence)
+  filter(TF1 == "E2F2") %>%
+  select(TF1_clone, TF1_protein_sequence)
 df_Yin2017_protein %>%
-  filter(symbol == "E2F2") %>%
-  select(symbol_clone, protein_sequence)
+  filter(TF1 == "E2F2") %>%
+  select(TF1_clone, TF1_protein_sequence)
 
 
 # Methyl SELEX motifs --------------------------------------------------------
 
 df_Yin2017_Methyl_protein <- df_Yin2017_Methyl %>%
-  left_join(protein_sequences, by = "symbol_clone", relationship = "many-to-many")
+  left_join(protein_sequences, by = "TF1_clone")
 
-test <- df_Yin2017_Methyl_protein[df_Yin2017_Methyl_protein$protein_sequence %>%
+test <- df_Yin2017_Methyl_protein[df_Yin2017_Methyl_protein$TF1_protein_sequence %>%
   is.na() %>%
   which(), ]
 
-test %>% select(symbol_clone, Human_Ensemble_ID, Ensembl_ID)
+test %>% select(TF1_clone, Human_Ensemble_ID, `TF1 Ensembl_ID`)
 
 
 # 4 FOXG1_eDBD   ENSG00000176165   NA                 ENSG00000176165 FOXG1B
 
 
-missing_ind <- df_Yin2017_Methyl_protein$protein_sequence %>%
+missing_ind <- df_Yin2017_Methyl_protein$TF1_protein_sequence %>%
   is.na() %>%
   which()
 
-df_Yin2017_Methyl_protein$symbol[missing_ind]
+df_Yin2017_Methyl_protein$TF1[missing_ind]
 
 lookup <- c(FOXG1 = "FOXG1B")
 
 for (i in 1:length(lookup)) {
-  missing_ind <- which(df_Yin2017_Methyl_protein$symbol == names(lookup[i]))
+  missing_ind <- which(df_Yin2017_Methyl_protein$TF1 == names(lookup[i]))
 
   # test=df_Yin2017_protein[missing_ind, ]
 
-  df_Yin2017_Methyl_protein$symbol_clone[missing_ind] <- gsub(names(lookup[i]), lookup[i], df_Yin2017_Methyl_protein$symbol_clone[missing_ind])
-  df_Yin2017_Methyl$symbol_clone[missing_ind] <- gsub(names(lookup[i]), lookup[i], df_Yin2017_Methyl$symbol_clone[missing_ind])
+  df_Yin2017_Methyl_protein$TF1_clone[missing_ind] <- gsub(names(lookup[i]), lookup[i], df_Yin2017_Methyl_protein$TF1_clone[missing_ind])
+  df_Yin2017_Methyl$TF1_clone[missing_ind] <- gsub(names(lookup[i]), lookup[i], df_Yin2017_Methyl$TF1_clone[missing_ind])
 
   df_Yin2017_Methyl_protein[missing_ind, ] <- df_Yin2017_Methyl_protein[missing_ind, 1:ncol(df_Yin2017_Methyl)] %>%
-    left_join(protein_sequences, by = "symbol_clone", relationship = "many-to-many")
+    left_join(protein_sequences, by = "TF1_clone", relationship = "many-to-many")
 }
 
-test <- df_Yin2017_Methyl_protein[df_Yin2017_Methyl_protein$protein_sequence %>%
+test <- df_Yin2017_Methyl_protein[df_Yin2017_Methyl_protein$TF1_protein_sequence %>%
   is.na() %>%
   which(), ]
 
-test %>% select(symbol_clone, Human_Ensemble_ID, Ensembl_ID)
+test %>% select(TF1_clone, Human_Ensemble_ID, `TF1 Ensembl_ID`)
 
 names(df_Yin2017_Methyl_protein)
-# "Ensembl_ID"  "HNGC"    "Clone used(eDBD   FL)"
-# "DOMAIN"  "Classificaton in Vaquerizas et al., 2009" "protein_sequence"
-
-df_Yin2017_Methyl_protein$`source organism` <- "human"
-
-df_Yin2017_Methyl_protein <- df_Yin2017_Methyl_protein %>%
-  rename(`clone type` = `Clone used`)
+# "TF1 Ensembl_ID"                               "TF1 HNGC"                                     "TF1 clone type"
+# "TF1 DOMAIN"                                   "TF1 Classificaton in Vaquerizas et al., 2009" "TF1 source organism"
+# "TF1 Clone source"                             "TF1 production method"                        "TF1_alternative_Ensembl_ID"
+# "TF1 Vaquerizas_comment"                       "TF1_protein_sequence"
 
 
-df_Yin2017_Methyl_protein$`production method` <- NA
-df_Yin2017_Methyl_protein$`Clone source` <- NA
 
 # Is there some for which the protein info is missing:
 
-df_Yin2017_Methyl_protein$protein_sequence %>%
+df_Yin2017_Methyl_protein$TF1_protein_sequence %>%
   is.na() %>%
   table(useNA = "always") # NO
 
 
 # Nitta2015 motifs --------------------------------------------------------
 
+#The paper does not report the protein sequences
+
 # Are the proteins in earlier studies
+
 df_Nitta2015 <- df_motif_info %>% filter(study == "Nitta2015")
 
 df_Nitta2015$symbol <- str_replace_all(df_Nitta2015$symbol, "\\s+", "")
@@ -548,18 +582,22 @@ df_Nitta2015$symbol
 
 without_clone <- c("SREBF2", "PAX4", "ONECUT2", "ONECUT1")
 
-df_Nitta2015$symbol %in% Jolma2013_protein_sequences$HNGC
-df_Nitta2015$symbol %in% Yin2017_protein_sequences$HNGC
+df_Nitta2015$symbol %in% Jolma2013_protein_sequences$`TF1 HNGC`
+df_Nitta2015$symbol %in% Yin2017_protein_sequences$`TF1 HNGC`
 
 Jolma2013_protein_sequences_unique %>%
-  filter(HNGC %in% without_clone) %>%
-  select(HNGC, protein_sequence, "clone type")
+  filter(`TF1 HNGC` %in% without_clone) %>%
+  select(`TF1 HNGC`, `TF1_protein_sequence`, "TF1 clone type")
 Yin2017_protein_sequences_unique %>%
-  filter(HNGC %in% without_clone) %>%
-  select(HNGC, protein_sequence, "clone type")
+  filter(`TF1 HNGC` %in% without_clone) %>%
+  select(`TF1 HNGC`, `TF1_protein_sequence`, "TF1 clone type")
 
-"ENSG00000082175" %in% Jolma2013_protein_sequences$Ensembl_ID
-"ENSG00000082175" %in% Yin2017_protein_sequences$Ensembl_ID
+"ENSG00000082175" %in% Jolma2013_protein_sequences$`TF1 Ensembl_ID`
+"ENSG00000082175" %in% Yin2017_protein_sequences$`TF1 Ensembl_ID`
+
+"ENSG00000082175" %in% Yin2017_protein_sequences$TF1_alternative_Ensembl_ID
+
+df_Nitta2015 <- df_Nitta2015 %>% rename(TF1=symbol)
 
 # Jolma2015 ---------------------------------------------------------------
 
@@ -596,6 +634,8 @@ df_Jolma2015_heterodimers <- df_motif_info %>% filter(study == "Jolma2015", expe
 protein_sequences <- read_excel("~/projects/SELEX/TF-amino-acid-sequences/Data/41586_2015_BFnature15518_MOESM33_ESM.xlsx",
   sheet = "S1 sequence information", skip = 24, n_max = 237 - 24
 )
+
+names(protein_sequences)
 
 protein_sequences$`Construct type` %>% table()
 # Crystal Full length protein used in HT-SELEX with mixed proteins
@@ -654,6 +694,32 @@ protein_sequences$symbol <- protein_sequences$`HNGC-name`
 df_Jolma2015_monomers_protein <- df_Jolma2015_monomers %>%
   left_join(protein_sequences, by = "symbol")
 
+names(df_Jolma2015_monomers_protein)
+
+
+
+df_Jolma2015_monomers_protein <- df_Jolma2015_monomers_protein %>%
+  rename(
+    `TF1 HNGC` = `HNGC-name`,
+    `TF1 Ensembl_ID` = `Ensembl id.`,
+    `TF1_protein_sequence` = `amino-acid sequence`,
+    `TF1 DOMAIN` = `main structural class`,
+    `TF1 6-mer` = `6-mer`,
+    `TF1 source organism` = `source organism`,
+    `TF1 Clone source` = `Clone source`,
+    `TF1 Construct type` = `Construct type`,
+    `TF1 Protein amount` = `Protein amount`,
+    `TF1 HT-SELEX validation` = `HT-SELEX validation`,
+    `TF1 Activity in CAP-SELEX` = `Activity in CAP-SELEX`,
+    `TF1 Included domain Ids` = `Included domain Ids`,
+    `TF1 Included domain description` = `Included domain description`,
+    `TF1 Excluded domain Ids` = `Excluded domain Ids`,
+    `TF1 Excluded domain description` = `Excluded domain description`
+  )
+
+
+
+
 df_Jolma2015_heterodimers <- df_Jolma2015_heterodimers %>%
   rename("symbol_both" = "symbol")
 
@@ -665,10 +731,10 @@ df_Jolma2015_heterodimers_protein <- df_Jolma2015_heterodimers %>%
 
 df_Jolma2015_heterodimers_protein <- df_Jolma2015_heterodimers_protein %>%
   rename(
-    `TF1 HNGC-name` = `HNGC-name`,
-    `TF1 Ensembl id.` = `Ensembl id.`,
-    `TF1 amino-acid sequence` = `amino-acid sequence`,
-    `TF1 main structural class` = `main structural class`,
+    `TF1 HNGC` = `HNGC-name`,
+    `TF1 Ensembl_ID` = `Ensembl id.`,
+    `TF1_protein_sequence` = `amino-acid sequence`,
+    `TF1 DOMAIN` = `main structural class`,
     `TF1 6-mer` = `6-mer`,
     `TF1 source organism` = `source organism`,
     `TF1 Clone source` = `Clone source`,
@@ -693,10 +759,10 @@ df_Jolma2015_heterodimers_protein <- df_Jolma2015_heterodimers_protein %>%
 
 df_Jolma2015_heterodimers_protein <- df_Jolma2015_heterodimers_protein %>%
   rename(
-    `TF2 HNGC-name` = `HNGC-name`,
-    `TF2 Ensembl id.` = `Ensembl id.`,
-    `TF2 amino-acid sequence` = `amino-acid sequence`,
-    `TF2 main structural class` = `main structural class`,
+    `TF2 HNGC` = `HNGC-name`,
+    `TF2 Ensembl_ID` = `Ensembl id.`,
+    `TF2_protein_sequence` = `amino-acid sequence`,
+    `TF2 DOMAIN` = `main structural class`,
     `TF2 6-mer` = `6-mer`,
     `TF2 source organism` = `source organism`,
     `TF2 Clone source` = `Clone source`,
@@ -710,6 +776,9 @@ df_Jolma2015_heterodimers_protein <- df_Jolma2015_heterodimers_protein %>%
     `TF2 Excluded domain description` = `Excluded domain description`
   )
 
+df_Jolma2015_heterodimers_protein <- df_Jolma2015_heterodimers_protein %>%
+  rename("TF2" = "symbol")
+
 # Everything ok
 
 Jolma2015_protein_sequences <- protein_sequences
@@ -722,6 +791,7 @@ df_Xie2025_monomers <- df_motif_info %>% filter(study == "Xie2025" & experiment 
 df_Xie2025_monomers[which(df_Xie2025_monomers$symbol == "THHEX"), "symbol"] <- "HHEX"
 
 
+
 df_Xie2025_heterodimers <- df_motif_info %>% filter(study == "Xie2025" & experiment == "CAP-SELEX") # 1336
 
 # These are unique proteins
@@ -729,6 +799,7 @@ protein_sequences <- read_excel("~/projects/SELEX/TF-amino-acid-sequences/Data/X
   sheet = "Table S1TF and ligand sequences",
   skip = 1270
 )
+names(protein_sequences)
 
 protein_sequences$`Clone used` <- gsub("eDBD;", "eDBD", protein_sequences$`Clone used`)
 
@@ -739,7 +810,18 @@ protein_sequences$`Clone used` %>% table()
 protein_sequences$symbol <- protein_sequences$HNGC
 
 df_Xie2025_monomers_protein <- df_Xie2025_monomers %>%
-  left_join(protein_sequences, by = "symbol", relationship = "many-to-many")
+  left_join(protein_sequences, by = "symbol")
+
+df_Xie2025_monomers_protein <- df_Xie2025_monomers_protein %>%
+  rename(
+    `TF1 HNGC` = `HNGC`,
+    `TF1 Ensembl_ID` = `Ensembl_ID`,
+    `TF1_protein_sequence` = `eDBD seuqence`,
+    `TF1 DOMAIN` = `DOMAIN`,
+    `TF1 clone type` = `Clone used`
+      )
+
+
 
 df_Xie2025_heterodimers <- df_Xie2025_heterodimers %>%
   rename("symbol_both" = "symbol")
@@ -752,11 +834,11 @@ df_Xie2025_heterodimers_protein <- df_Xie2025_heterodimers %>%
 
 df_Xie2025_heterodimers_protein <- df_Xie2025_heterodimers_protein %>%
   rename(
-    `TF1 Ensembl_ID.` = `Ensembl_ID`,
+    `TF1 Ensembl_ID` = `Ensembl_ID`,
     `TF1 HNGC` = HNGC,
-    `TF1 Clone used` = `Clone used`,
+    `TF1 clone type` = `Clone used`,
     `TF1 DOMAIN` = DOMAIN,
-    `TF1 eDBD sequence` = `eDBD seuqence`
+    `TF1_protein_sequence` = `eDBD seuqence`
   )
 
 df_Xie2025_heterodimers_protein <- df_Xie2025_heterodimers_protein %>%
@@ -770,20 +852,102 @@ df_Xie2025_heterodimers_protein <- df_Xie2025_heterodimers_protein %>%
 
 df_Xie2025_heterodimers_protein <- df_Xie2025_heterodimers_protein %>%
   rename(
-    `TF2 Ensembl_ID.` = `Ensembl_ID`,
+    `TF2 Ensembl_ID` = `Ensembl_ID`,
     `TF2 HNGC` = HNGC,
-    `TF2 Clone used` = `Clone used`,
+    `TF2 clone type` = `Clone used`,
     `TF2 DOMAIN` = DOMAIN,
-    `TF2 eDBD sequence` = `eDBD seuqence`
+    `TF2_protein_sequence` = `eDBD seuqence`
   )
 
 df_Xie2025_heterodimers_protein$`TF2 HNGC` %>% table(useNA = "always") # 218
 df_Xie2025_heterodimers_protein$`TF1 HNGC` %>% table(useNA = "always") # 218
 
+df_Xie2025_heterodimers_protein <- df_Xie2025_heterodimers_protein %>%
+  rename("TF2" = "symbol")
+
 Xie2025_protein_sequences <- protein_sequences
 
 
-save(df_Jolma2013_protein,
+
+
+#How many proteins we get
+
+nrow(df_Jolma2013_protein)+
+nrow(df_Nitta2015)+nrow(df_motif_info %>% filter(study=="Morgunova2015"))+
+nrow(df_Jolma2015_heterodimers_protein)+
+nrow(df_Jolma2015_monomers_protein)+
+nrow(df_Xie2025_monomers_protein)+
+nrow(df_Xie2025_heterodimers_protein)+
+nrow(df_Yin2017_protein) # 3636
+
+tested=df_motif_info %>% filter(!(experiment %in% "Methyl-HT-SELEX")) # 3636
+
+names(df_Jolma2013_protein)
+names(df_Nitta2015)
+names(df_Yin2017_protein)
+df_Jolma2015_monomers_protein=df_Jolma2015_monomers_protein %>% rename(TF1=symbol)
+df_Xie2025_monomers_protein =df_Xie2025_monomers_protein %>% rename(TF1=symbol)
+
+
+df_Jolma2013_protein$symbol_clone=NULL
+df_Nitta2015$symbol_clone=NULL
+df_Yin2017_protein$symbol_clone=NULL
+df_Jolma2015_monomers_protein$symbol_clone=NULL
+df_Xie2025_monomers_protein$symbol_clone=NULL
+
+
+ all_data=bind_rows(df_Jolma2013_protein,
+  df_Nitta2015,
+  df_motif_info %>% filter(study=="Morgunova2015"),
+  df_Jolma2015_monomers_protein,
+  df_Xie2025_monomers_protein,
+  df_Yin2017_protein,
+  df_Jolma2015_heterodimers_protein,
+  df_Xie2025_heterodimers_protein
+  )
+
+all_data$`TF2 Classificaton in Vaquerizas et al., 2009`=NA
+all_data$`TF2 production method`=NA
+all_data$TF2_alternative_Ensembl_ID=NA
+all_data$`TF2 Vaquerizas_comment`=NA
+
+
+names(all_data)
+
+all_data=all_data[,c("ID","old_ID", "motif_ID", "symbol","symbol_both", "TF1", "TF2", "Human_Ensemble_ID", "clone",
+  "family",                                       "Lambert2018_families",
+  "organism",                                     "study",                                        "experiment",
+  "ligand",                                       "batch",                                        "seed",
+  "multinomial",                                  "cycle",                                        "representative",
+  "short",                                        "type",                                         "comment",
+  "filename",                                     "IC",                                           "length",
+  "consensus",                                    "kld_between_revcomp",                          "Methyl.SELEX.Motif.Category",
+  "match_number",                                 "threshold",                                    "phyloP_threshold",
+  "TF1 HNGC",                                     "TF1 Ensembl_ID",
+  "TF1_protein_sequence",                         "TF1 DOMAIN",                                   "TF1 6-mer",
+  "TF1 source organism",                          "TF1 Clone source",                             "TF1 Construct type",
+  "TF1 Protein amount",                           "TF1 HT-SELEX validation",                      "TF1 Activity in CAP-SELEX",
+  "TF1 Included domain Ids",                      "TF1 Included domain description",              "TF1 Excluded domain Ids",
+  "TF1 Excluded domain description",              "TF1 clone type",
+  "TF1 Classificaton in Vaquerizas et al., 2009", "TF1 production method",
+  "TF1_alternative_Ensembl_ID",                   "TF1 Vaquerizas_comment",
+  "TF2 HNGC",                                     "TF2 Ensembl_ID",
+  "TF2_protein_sequence",                         "TF2 DOMAIN",                                   "TF2 6-mer",
+  "TF2 source organism",                          "TF2 Clone source",                             "TF2 Construct type",
+  "TF2 Protein amount",                           "TF2 HT-SELEX validation",                      "TF2 Activity in CAP-SELEX",
+  "TF2 Included domain Ids",                      "TF2 Included domain description",              "TF2 Excluded domain Ids",
+  "TF2 Excluded domain description",              "TF2 clone type",
+  "TF2 Classificaton in Vaquerizas et al., 2009", "TF2 production method",
+  "TF2_alternative_Ensembl_ID",                   "TF2 Vaquerizas_comment"
+  )  ]
+
+all_data$symbol %>% table(useNA = "always")
+all_data$TF1 %>% table(useNA = "always")
+all_data$TF2 %>% table(useNA = "always")
+
+all_data$TF1[is.na(all_data$TF1)]=all_data$symbol[is.na(all_data$TF1)]
+
+save(all_data, df_Jolma2013_protein,
   Jolma2013_protein_sequences,
   Jolma2013_protein_sequences_unique,
   df_Yin2017_protein,
@@ -798,3 +962,24 @@ save(df_Jolma2013_protein,
   Xie2025_protein_sequences,
   file = "~/projects/SELEX/TF-amino-acid-sequences/RData/protein_sequences.RData"
 )
+
+#For how many proteins we found protein sequences
+
+#Monomers
+all_data %>% filter(experiment!="CAP-SELEX") %>% nrow() # 1738
+all_data %>% filter(experiment!="CAP-SELEX") %>% filter(!is.na(TF1_protein_sequence)) %>% nrow() # 1726 of 1738
+
+test=all_data %>% filter(experiment!="CAP-SELEX") %>% filter(is.na(TF1_protein_sequence))
+test$study %>% table()
+#Morgunova2015     Nitta2015       Yin2017
+#            1            10             1
+#Heterodimers
+
+all_data %>% filter(experiment=="CAP-SELEX") %>% nrow() # 1898
+
+all_data %>% filter(experiment=="CAP-SELEX") %>% filter(!is.na(TF1_protein_sequence) & !is.na(TF2_protein_sequence)) %>% nrow() # 1897
+
+test=all_data %>% filter(experiment=="CAP-SELEX") %>% filter(is.na(TF1_protein_sequence) | is.na(TF2_protein_sequence))
+test$study %>% table()
+#Xie2025
+#      1

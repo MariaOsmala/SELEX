@@ -30,6 +30,8 @@ Data/ #Supplementary tables
 # check protein sequences
 TF-amino-acid-sequences/code/check_protein_sequences_all_motifs.R
 
+#Protein sequence is missing or wrong for 28 motifs
+
 #combine motifs, SELEX data and protein sequences
 /projappl/project_2013895/SELEX/TF-amino-acid-sequences/code/combine_motifs_SELEXdata_proteinSequences.R
 
