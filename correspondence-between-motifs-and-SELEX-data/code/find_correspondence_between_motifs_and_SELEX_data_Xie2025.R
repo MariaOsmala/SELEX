@@ -79,8 +79,6 @@ test=ENA_metadata[ind,names(ENA_metadata) %in% c("experiment_title", "experiment
                         "symbol", "cycle","batch",  "ligand", "csc_filename") ]
 
 
-
-
 # Zero cycle background ---------------------------------------------------
 
 ENA_metadata_background=read_delim("/projappl/project_2013895/SELEX/download-data/Data/ENA_metadata_input_libraries.tsv", delim="\t")
@@ -160,7 +158,7 @@ metadata_Xie2025=metadata_Xie2025 %>% left_join( ENA_metadata %>%
                                                        rename_with(~ paste0(.x, "_signal")), 
                                                      by=c("CSC_SELEX_filename"="csc_filename_signal"))
 
-metadata_Xie2025=metadata_Xie2025 %>% left_join( ENA_metadata %>% 
+metadata_Xie2025=metadata_Xie2025 %>% left_join( ENA_metadata_background %>% 
                                                        select(
                                                          c("run_accession", "study_accession", "secondary_study_accession",
                                                            "sample_accession", "secondary_sample_accession", "experiment_accession",
@@ -190,7 +188,6 @@ tmp=metadata_Xie2025[missing_ind,]
 # THHEX\_TCGAG40NCATT\_YT\_NCAATTNNNNNNNNNNAATTGN\_1\_3
 
 
-
 missing_ind=which(is.na(metadata_Xie2025$CSC_SELEX_background_filename))
 
 tmp=metadata_Xie2025[missing_ind,]
@@ -212,6 +209,9 @@ symbols_with_data=ENA_metadata %>% filter(motif_derived=="YES") %>% pull(symbol)
 symbols_without_data=ENA_metadata %>% filter(motif_derived=="NO") %>% pull(symbol) %>% unique()
 symbols_without_data[!which(symbols_without_data %in% symbols_with_data)]
 
+
+test=metadata_Xie2025 %>% filter(!is.na(CSC_SELEX_filename)) %>% filter(is.na(fastq_ftp_signal)) #9
+metadata_Xie2025 %>% filter(!is.na(CSC_SELEX_background_filename)) %>% filter(is.na(fastq_ftp_background)) %>% nrow() #0
 
 tmp = metadata_Xie2025 %>% 
   select(ID,motif_ID,symbol,clone,Lambert2018_families,experiment,ligand, batch,cycle,cycle_background, unique_background,seed,CSC_SELEX_filename, 

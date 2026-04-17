@@ -128,6 +128,13 @@ df$filename=SELEX_data_filenames
 ENA_metadata=ENA_metadata %>% left_join(df, by="filename")
 ENA_metadata$csc_filename=paste0(data_path, study,"/submitted_ftp/", ENA_metadata$filename)
 ENA_metadata$motif_derived="NO"
+
+#Does this data contain all cycles
+
+ENA_metadata %>% pull(cycle) %>% table()
+#0   1   2   3   4   5   6   7 
+#386 520 547 547 547 100  69  10 
+
 metadata_Jolma2013$CSC_SELEX_filename=NA
 metadata_Jolma2013$CSC_SELEX_background_filename=NA
 

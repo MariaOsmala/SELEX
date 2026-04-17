@@ -166,8 +166,11 @@ metadata_combined$clone[metadata_combined$study=="Morgunova"]="DBD"
 #write_delim(metadata_combined, "/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_06102025.tsv", delim="\t")
 write_delim(metadata_combined, "/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_19032026.tsv", delim="\t")
 
+#metadata_combined=read_delim("/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_19032026.tsv", delim="\t")
+#test=metadata_combined%>% filter(!is.na(CSC_SELEX_filename)) %>% filter(is.na(fastq_ftp_signal)) #9
+#metadata_combined %>% filter(!is.na(CSC_SELEX_background_filename)) %>% filter(is.na(fastq_ftp_background)) %>% nrow() #0
 
-missing=metadata_combined %>% filter(experiment!="Methyl-HT-SELEX") %>% filter(is.na(CSC_SELEX_filename)| is.na(CSC_SELEX_background_filename)) %>% 
+missing=metadata_combined %>% filter(experiment!="Methyl-HT-SELEX"& ID!="E2F8_Morgunova2015") %>% filter(is.na(CSC_SELEX_filename)| is.na(CSC_SELEX_background_filename)) %>% 
   select(ID, study, experiment, CSC_SELEX_filename, CSC_SELEX_background_filename)
 
 #write_delim(missing, "/projappl/project_2013895/motif_metadata/motifs_with_missing_SELEX_data.tsv", delim="\t")

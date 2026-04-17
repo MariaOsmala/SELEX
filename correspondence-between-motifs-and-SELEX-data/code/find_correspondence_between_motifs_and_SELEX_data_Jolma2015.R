@@ -238,7 +238,15 @@ metadata_Jolma2015$Allas_SELEX_background_filename=gsub("/scratch/project_201389
 
 #Add also other relevant ENA_metadata info to metadata_Jolm2013
 
-metadata_Jolma2015=metadata_Jolma2015 %>% left_join( ENA_metadata %>% 
+setdiff(names(ENA_metadata), names(ENA_metadata_background))
+setdiff( names(ENA_metadata_background), names(ENA_metadata))
+
+
+ENA_all=dplyr::bind_rows(ENA_metadata, ENA_metadata_background)
+
+
+
+metadata_Jolma2015=metadata_Jolma2015 %>% left_join( ENA_all %>% 
                                                        select(
                                                          c("run_accession", "study_accession", "secondary_study_accession",
                                                            "sample_accession", "secondary_sample_accession", "experiment_accession",
@@ -247,7 +255,7 @@ metadata_Jolma2015=metadata_Jolma2015 %>% left_join( ENA_metadata %>%
                                                        rename_with(~ paste0(.x, "_signal")), 
                                                      by=c("CSC_SELEX_filename"="csc_filename_signal"))
 
-metadata_Jolma2015=metadata_Jolma2015 %>% left_join( ENA_metadata %>% 
+metadata_Jolma2015=metadata_Jolma2015 %>% left_join( ENA_all %>% 
                                                        select(
                                                          c("run_accession", "study_accession", "secondary_study_accession",
                                                            "sample_accession", "secondary_sample_accession", "experiment_accession",
@@ -274,6 +282,9 @@ missing_ind=which(is.na(metadata_Jolma2015$CSC_SELEX_background_filename))
 tmp=metadata_Jolma2015[missing_ind,]
 
 tmp$ID #same as above
+
+metadata_Jolma2015%>% filter(!is.na(CSC_SELEX_filename)) %>% filter(is.na(fastq_ftp_signal)) %>% nrow() #0
+metadata_Jolma2015 %>% filter(!is.na(CSC_SELEX_background_filename)) %>% filter(is.na(fastq_ftp_background)) %>% nrow() #0
 
 #For which symbols, the motif was derived
 symbols_with_data=ENA_metadata %>% filter(motif_derived=="YES") %>% pull(symbol) %>% unique()
