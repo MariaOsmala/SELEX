@@ -18,83 +18,13 @@ rm(list = ls())
 
 # All 3933 motifs with current type and protein copy info
 
-# Clean metadata
-
-metadata <- read_delim("/Users/osmalama/projects/TFBS/Data/SELEX-motif-collection/metadata_final.tsv", delim = "\t") # nolint #3933
-
-included_cols <- c(
-  "ID", "motif_ID", "symbol", "study", "experiment", "seed", "multinomial", # nolint
-  "cycle", "representative", "filename", "IC", "length", # nolint
-  "Methyl.SELEX.Motif.Category" # nolint
-) # nolint
 
 
-metadata <- metadata |> dplyr::select(all_of(included_cols))
-
-
-# Monomer network
-
-monomer_nodes <- read_delim(
-  "~/projects/cytoscape/monomer_network/node_table_24022026.csv", # nolint
-  col_types = cols(.default = col_character()), delim = ","
-) # nolint
-
-monomer_nodes <- monomer_nodes |> filter(node_type == "motif") # 2035
-
-monomer_nodes |>
-  filter(representative == "YES") |>
-  nrow() # 439
-
-included_cols <- c(
-  "name", "symbol",
-  "Lambert2018_families",
-  "type",
-  "type_review"
-)
-
-monomer_nodes <- monomer_nodes |>
-  dplyr::select(all_of(included_cols)) |>
-  dplyr::rename(ID = name, TF1 = symbol, TF1_family = Lambert2018_families)
-
-monomer_nodes$TF2 <- NA
-monomer_nodes$TF2_family <- NA
-
-
-# Heterodimer network
-
-heterodimer_nodes <- read_delim(
-  "~/projects/cytoscape/heterodimer_network/node_table_24022026.csv", # nolint
-  col_types = cols(.default = col_character()), delim = ","
-) # nolint
-
-heterodimer_nodes <- heterodimer_nodes |> filter(node_type == "motif") # 1898
-
-heterodimer_nodes |>
-  filter(representative == "YES") |>
-  nrow() # 793
-
-
-included_cols <- c(
-  "name",
-  "TF1", "TF2", "TF1_families",
-  "TF2_families", "type", "type_review"
+metadata=read_delim("/Users/osmalama/projects/SELEX/motif-metadata/motifs_with_SELEX_signal_and_background_and_proteins_01072026.tsv",
+            delim = "\t"
 )
 
 
-heterodimer_nodes <- heterodimer_nodes |>
-  dplyr::select(all_of(included_cols)) |>
-  dplyr::rename(ID = name, TF1_family = TF1_families, TF2_family = TF2_families)
-
-node_table <- rbind(
-  monomer_nodes |>
-    dplyr::select(ID, TF1, TF1_family, TF2, TF2_family, type, type_review),
-  heterodimer_nodes |>
-    dplyr::select(ID, TF1, TF1_family, TF2, TF2_family, type, type_review)
-)
-
-metadata <- metadata |> left_join(node_table, by = "ID")
-
-metadata$type[which(is.na(metadata$type))] <- metadata$type_review[which(is.na(metadata$type))] # nolint
 
 metadata |>
   filter(representative == "YES") |>
@@ -102,104 +32,67 @@ metadata |>
   table(useNA = "always") |>
   as.data.frame()
 
-#              type Freq
-# 1       composite  483
-# 2      composite?    1
-# 3         dimeric  179
-# 4        dimeric?    9
-# 5       monomeric  211
-# 6         spacing  301
-# 7        spacing?    8
-# 8   ssDNA binding   17
-# 9  ssDNA binding?    2
-# 10     tetrameric    6
-# 11    tetrameric?    3
-# 12       trimeric    3
-# 13        unknown    9
-# 14           <NA>    0
+# type Freq
+# 1     composite  485
+# 2       dimeric  186
+# 3     monomeric  212
+# 4       spacing  308
+# 5 ssDNA binding   18
+# 6    tetrameric    9
+# 7      trimeric    3
+# 8       unknown   11
+# 9          <NA>    0
 
 # metadata
 
-metadata |>
-  filter(representative == "YES") |>
-  dplyr::select(type_review) |>
-  table(useNA = "always") |>
-  as.data.frame()
-
-# type_review Freq
-# 1     composite  489
-# 2       dimeric  189
-# 3     monomeric  211
-# 4       spacing  304
-# 5 ssDNA binding   18
-# 6    tetrameric    8
-# 7      trimeric    4
-# 8       unknown    9
-# 9          <NA>    0
-
 data_path <- "/Users/osmalama/projects/SELEX/motif-metadata/"
 
-# motifs for which there is SELEX data and the protein sequence is checked against the claimed ENSG
-data_file <-
-  "motifs_with_SELEX_signal_and_background_and_proteins_04032026_checked.tsv"
 
-proteins_checked <- read_delim(paste0(data_path, data_file),
-  col_types = cols(.default = col_character()),
-  delim = "\t"
-) # 3224
-
-proteins_checked$TF1_copies |> table(useNA = "always")
-proteins_checked$TF2_copies |> table(useNA = "always")
+metadata$TF1_copies |> table(useNA = "always")
+metadata$TF2_copies |> table(useNA = "always")
 
 
-# test that TF1 and TF2 are the same
-
-match_ind <- match(proteins_checked$ID, metadata$ID)
-
-table(proteins_checked$TF1 == metadata$TF1[match_ind]) # TRUE
-table(proteins_checked$TF2 == metadata$TF2[match_ind]) # TRUE
-
-metadata <- metadata |>
-  left_join(
-    proteins_checked |>
-      dplyr::select( # nolint
-        ID, TF1_copies, TF2_copies, # nolint
-        TF1_protein_sequence, TF2_protein_sequence,
-        `protein sequence 1`, `protein sequence 2`, # nolint
-        `protein sequence 3`, `protein sequence 4`
-      ), # nolint
-    by = "ID" # nolint
-  )
 
 # Check for which we need to create S2A data because they have protein info
 
 is.na(metadata$`protein sequence 1`) |>
-  table(useNA = "always") # 3224 with nonNA value
+  table(useNA = "always") # 3326 with nonNA value
 
 is.na(metadata$`TF1_protein_sequence`) |>
-  table(useNA = "always") # 3224 with nonNA value
+  table(useNA = "always") # 3608 with nonNA value
 
 
 motifs_with_protein_info <- metadata |>
   filter(!is.na(`protein sequence 1`)) |>
-  dplyr::select(ID)
+  dplyr::select(ID) #3326
 
 write_delim(motifs_with_protein_info,
   paste0(
     data_path,
-    "motifs_with_protein_info_04032026.tsv"
+    "motifs_with_protein_info_01072026.tsv"
   ),
   delim = "\t"
 )
 
-# motifs with S2A data
+# motifs with S2A data, those with protein_info and k-mer scores? no, less
 
-data_file <- "motifs_with_S2A_and_proteins.tsv"
-s2a <- read_delim(paste0(data_path, data_file), delim = "\t") # 3594
+# metadata %>% filter(!is.na(`protein sequence 1`) & kmer_scoring_exists==TRUE) %>% nrow() #3290 matches
 
-s2a$included_in_S2A |> table(useNA = "always") # 3594 with nonNA value
+# included_in_S2A=metadata %>% filter(!is.na(`protein sequence 1`) & kmer_scoring_exists==TRUE) %>% pull(ID)
+
+# metadata$included_in_S2A=FALSE
+
+# metadata$included_in_S2A[which(metadata$ID %in% included_in_S2A)]=TRUE
+
+#use this once ready
+#"/projappl/project_2013895/motif_metadata/motifs_with_S2A_and_proteins_01072026.tsv"
+
+data_file <- "motifs_with_S2A_and_proteins_01072026.tsv"
+s2a <- read_delim(paste0(data_path, data_file), delim = "\t") #
+
+s2a$included_in_S2A |> table(useNA = "always") # 
 # FALSE  TRUE  <NA>
-#  487  3107     0
+#  656  3277     0
 
 
 metadata <- metadata |>
@@ -209,42 +102,45 @@ metadata <- metadata |>
     by = "ID"
   )
 
-metadata$included_in_S2A |> table(useNA = "always") # 3107
-# FALSE  TRUE  <NA>
-#  487  3107   339
+metadata$included_in_S2A |> table(useNA = "always") # 3277
+#FALSE  TRUE  <NA> 
+#  656  3277     0 
 
-metadata$included_in_S2A[which(is.na(metadata$included_in_S2A))] <- FALSE
-# FALSE  TRUE  <NA>
-# 826  3107     0
+#What are those for which k-mer scores and proteins exist but do not end up to the final dataset
+
+metadata %>% filter(!is.na(`protein sequence 1`) & kmer_scoring_exists==TRUE & !included_in_S2A) %>% select(ID, TF1_copies, TF2_copies)
+
+# Some issue with this data
+# 1 MGA_DLX2_CAP-SELEX_TGCGGT40NTCA_AAD_AGGTGNTAATTR_1_2u             1          1         
+# 2 POU2F1_ELK1_CAP-SELEX_TGACGA40NGCA_AS_NCCGGATATGCAN_1_2u          1          1         
+# 3 POU2F1_ETV1_CAP-SELEX_TGCGAA40NAGC_AS_NCCGGATATGCAN_1_2u          1          1         
+# 4 ERF_SREBF2_CAP-SELEX_TCTTTG40NACT_AAC_NNCACGTGACMGGAARNN_1_3u     1          2         
+# 5 GCM1_ERG_CAP-SELEX_TAAGAA40NATA_AX_RTRYGGGCGGAARKN_1_3u           1          1         
+# 6 HOXA3_PAX5_CAP-SELEX_TCTGTC40NCAA_AY_YNATTAGTCACGCWTSRNTR_2_3u    1          1         
+# 7 GCM2_DLX2_CAP-SELEX_TGTGCT40NCGG_AAB_RTRCGGGNNNNNTAATTR_1_3u      1          1         
+# 8 GCM2_SOX15_CAP-SELEX_TCGCCA40NCCT_AAB_ATRCGGGYNNNNNYWTTGTNN_1_3u  1          1         
+# 9 GCM2_SOX15_CAP-SELEX_TCGCCA40NCCT_AAB_RTRCGGGNNNNNNNYWTTGTNN_1_3u 1          1         
+# 10 GCM2_SOX15_CAP-SELEX_TCGCCA40NCCT_AAB_RTRCGGGNNNNRNACAAWN_1_3u    1          1         
+# 11 GCM2_SOX15_CAP-SELEX_TCGCCA40NCCT_AAB_RTRCGGGNNNRNACAAWN_1_3u     1          1         
+# 12 HOXB7_HT-SELEX_TTATTT40NCGT_KV_NGTAATTANN_1_4u                    1          NA        
+# 13 TBX18_HT-SELEX_TATTTG40NCCA_KP_NRAGGTGTGAAN_1_4u                  1          NA     
 
 # S2A download link
 # https://a3s.fi/SELEX/sequence-to-affinity-data.tar.gz
 
 
 metadata |>
-  dplyr::select(type_review) |>
+  dplyr::select(type) |>
   table(useNA = "always") # 
 
 metadata |>
   filter(representative == "YES") |>
-  dplyr::select(type_review) |>
-  table(useNA = "always") # 489 composite(OK), 189 dimeric?(190 in fig 3b), 211 monomeric, 304 spacing, 18 ssDNA binding, 8 tetrameric, 4 trimeric, 9 unknown, 0 NA
+  dplyr::select(type) |>
+  table(useNA = "always") # 
 
-metadata %>% filter(experiment!="CAP-SELEX" & representative=="YES") %>% select(TF1_copies) %>% table(useNA="always") #These are not up to date
-#1    2    3    4 <NA> 
-#183  176    4    8   68 
-
-
-# For 2015 CAP-SELEX non-representative motifs, convert the type_review to NA
-
-metadata <- metadata |>
-  mutate(type_review = ifelse((experiment == "CAP-SELEX" & study == "Jolma2015" & representative == "NO"), NA, type_review))
-
-metadata$type <- NULL
-
-# rename type_review to type
-
-metadata <- metadata |> dplyr::rename("type" = "type_review")
+metadata %>% filter(experiment!="CAP-SELEX" & representative=="YES") %>% select(TF1_copies) %>% table(useNA="always") 
+#  1    2    3    4 <NA> 
+#  230  186    3    9   11 
 
 # Convert YES/NO in representative to yes/no
 
@@ -264,10 +160,33 @@ metadata <- metadata |>
 metadata |>
   filter(representative == "yes") |>
   dplyr::select(type) |>
-  table(useNA = "always") %>% sum()# 489 composite(OK), 189 dimeric(190 in fig 3b?), 211 monomeric, 304 spacing, 18 ssDNA binding, 8 tetrameric, 4 trimeric, 9 unknown, 0 NA
+  table(useNA = "always") %>% sum()# 
 
-write_delim(metadata, file="/Users/osmalama/projects/TFBS/Data/SELEX-motif-collection/Supplementary_Table_1_Submission_March2026.tsv", delim="\t")
+metadata<-  metadata%>%
+  separate(Lambert2018_families, into = c("TF1_family", "TF2_family"), sep = "_")
 
+# TF1_family
+# TF2_family
+
+# Relocate TF1_family and TF2_family after TF1 and TF2
+
+metadata <- metadata %>%
+  relocate(TF1_family, .after = TF1) %>%
+  relocate(TF2_family, .after = TF2)
+
+metadata %>% filter(experiment!="CAP-SELEX"& is.na(TF1_family)) %>% pull(ID)
+#THHEX_TCGAG40NCATT_YT_NCAATTNNNNNNNNNNAATTGN_1_3 Homeodomain
+
+metadata$TF1_family[which(metadata$ID=="THHEX_TCGAG40NCATT_YT_NCAATTNNNNNNNNNNAATTGN_1_3")]="Homeodomain"
+
+metadata %>% filter(experiment!="CAP-SELEX"& TF1_family=="Znf") %>% pull(ID)
+#"XPA_HT-SELEX_TCACGC40NACT_KX_NCACCTCACAN_1_4" Znf_XPA
+metadata$TF1_family[which(metadata$ID=="XPA_HT-SELEX_TCACGC40NACT_KX_NCACCTCACAN_1_4")]="Znf_XPA"
+
+
+#write_delim(metadata, file="/Users/osmalama/projects/TFBS/Data/SELEX-motif-collection/Supplementary_Table_1_Submission_March2026.tsv", delim="\t")
+write_delim(metadata, file="/Users/osmalama/projects/TFBS/Data/SELEX-motif-collection/Supplementary_Table_1_Submission_July2026.tsv", delim="\t")
+#Move this to "/Users/osmalama/Dropbox/Taipale-lab/Nature genetics review/Submission_July2026/metadata.tsv"
 # Write table to excel
 
 # install.packages("openxlsx")
@@ -279,14 +198,17 @@ library(openxlsx)
 
 
 pfm_path_col <- "filename"
-out_file <- "/Users/osmalama/Dropbox/Taipale-lab/Nature genetics review/Submission_March2026/Supplementary_Table_1.xlsx" # nolint
+out_file <- "/Users/osmalama/Dropbox/Taipale-lab/Nature genetics review/Submission_July2026/Supplementary_Table_1.xlsx" # nolint
 export_cols <- c(
   "motif_ID", "experiment", "study", "TF1", "TF2",
   "TF1_family", "TF2_family", "type", "representative",
   "TF1_protein_sequence", "TF2_protein_sequence",
   "TF1_copies", "TF2_copies", "seed",
-  "included_in_S2A"
+  "included_in_S2A","fastq_ftp_signal", "fastq_ftp_background"   
 )
+
+            
+
 add_blank_row_between <- FALSE
 fontName <- "Verdana"
 fontSize <- 12
@@ -397,6 +319,7 @@ freezePane(wb, "motifs", firstRow = TRUE)
 saveWorkbook(wb, out_file, overwrite = TRUE)
 out_file
 
+#What is the stuff below? Results to exactly the same excel table?
 
 # Build output table
 blocks <- vector("list", nrow(metadata))
@@ -491,7 +414,7 @@ if (length(base_rows)) {
 freezePane(wb, "motifs", firstRow = TRUE)
 setColWidths(wb, "motifs", cols = 1:ncol(out_df), widths = "auto")
 
-saveWorkbook(wb, out_file, overwrite = TRUE)
+saveWorkbook(wb,"/Users/osmalama/Dropbox/Taipale-lab/Nature genetics review/Submission_July2026/Supplementary_Table_1_version2.xlsx", overwrite = TRUE)
 out_file
 
 
