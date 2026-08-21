@@ -11,7 +11,7 @@ library(tidyr)
 rm(list=ls())
 
 
-metadata=read_delim("/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data.tsv", delim="\t") #this contains all motifs plus SELEX data info
+metadata=read_delim("/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_19032026.tsv", delim="\t") #this contains all motifs plus SELEX data info
 metadata= metadata %>% filter(experiment %in% c("HT-SELEX", "CAP-SELEX")) #3636
 metadata=metadata %>% filter(!is.na(seed)) #3635
 
@@ -19,7 +19,7 @@ metadata=metadata[order(metadata$length),]
 
 results_path="/projappl/project_2013895/SELEX/generate_kmers_withNs_from_seed/Data/"
 
-lambda_path="/scratch/project_2013895/SELEX/spacek/lambda_2026/"
+lambda_path="/scratch/project_2013895/SELEX/spacek/lambda/"
 #Remove first zero-sized files
 #find . -maxdepth 1 -type f -size 0 -delete
 # ls | wc -l 3470
@@ -95,7 +95,7 @@ for(index in 1:nrow(metadata)){ #0-9
   print(index)
   data=metadata[index,] 
   #data=tmp[2,]
-  res <- try(parse_spacek_report(paste0("/scratch/project_2013895/SELEX/spacek/lambda_2026/", data$ID, ".txt")), silent=TRUE)
+  res <- try(parse_spacek_report(paste0("/scratch/project_2013895/SELEX/spacek/lambda/", data$ID, ".txt")), silent=TRUE)
   
   if(class(res)!="try-error"){
     #lambda exists
@@ -115,19 +115,16 @@ for(index in 1:nrow(metadata)){ #0-9
 
 metadata$lambda %>% is.na() %>% table()
 #FALSE  TRUE 
-#3388   247 
+#FALSE  TRUE 
+#3596    39 
 
 tmp=metadata %>% filter(is.na(lambda)) #%>% pull(ID) %>% sort() %>% head()
 
 #For how many motifs, either signal or background is missing
-table(is.na(metadata$CSC_SELEX_filename) | is.na(metadata$CSC_SELEX_background_filename)) #62
+table(is.na(metadata$CSC_SELEX_filename) | is.na(metadata$CSC_SELEX_background_filename)) #39
 
-#for how many motifs, signal and background exist but lambda computation fails 185
+#for how many motifs, signal and background exist but lambda computation fails, none
 table( (!is.na(metadata$CSC_SELEX_filename) & !is.na(metadata$CSC_SELEX_background_filename)) & is.na(metadata$lambda) )
-
-#185+62=247
-
-tmp=metadata %>% filter( (!is.na(metadata$CSC_SELEX_filename) & !is.na(metadata$CSC_SELEX_background_filename)) & is.na(metadata$lambda) )
 
 ggplot(metadata, aes(x = lambda)) +
   geom_histogram(#aes(y = after_stat(density)),
@@ -141,9 +138,24 @@ ggplot(metadata, aes(x = lambda)) +
   
   
 
-table(metadata$lambda >1)
+table(metadata$lambda >1) #25
+
+#Indicate for which motifs we got scored k-mers
+
+kmer_scores=dir("/scratch/project_2013895/SELEX/scored_kmers_fixed_N_seeds_June2026/") #3596
+
+kmer_scores=gsub(".tsv", "", kmer_scores)
+
+metadata$kmer_scoring_exists=FALSE
+metadata$kmer_scoring_exists[which(metadata$ID %in% kmer_scores)]=TRUE
+
+metadata %>% select(kmer_scoring_exists) %>% table() #FALSE 40
 
 write_delim(metadata,
-            file="/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_lambda_info.tsv",
+            file="/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_19032026_lambda_info.tsv",
             delim="\t")
+
+
+#metadata=read_delim(file="/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_19032026_lambda_info.tsv",
+#            delim="\t")
   

@@ -8,9 +8,10 @@
 #SBATCH --time=03:00:00
 #SBATCH --mem-per-cpu=5G #
 #SBATCH --cpus-per-task=1
-#SBATCH --array=1-358 # 1-358
+#SBATCH --array=11-360 # 1-360
 
-#32031018_[1-358] 
+# 35320799_[1-10] #OK
+# 35320813_[11-360] #OK, the last motif fails because seed and motif are of unequal length. 
 
 #sacct --format JobID%-20,State -j 30043694 | grep FAILED
 

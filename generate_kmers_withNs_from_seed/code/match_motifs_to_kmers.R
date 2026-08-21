@@ -10,7 +10,7 @@ library(tidyr)
 
 
 args <- commandArgs(trailingOnly = TRUE)
-arrays=as.numeric(args[1]) #1-358
+arrays=as.numeric(args[1]) #1-360
 addition=as.numeric(args[2])
 arrays=arrays+addition
 
@@ -19,7 +19,7 @@ length=10 #starting from 231 2301-2310
 start_ind=(arrays-1)*length+1 #100
 end_ind=arrays*length #100
 
-metadata=read_delim("/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data.tsv", delim="\t") #this contains all motifs plus SELEX data info
+metadata=read_delim("/projappl/project_2013895/motif_metadata/metadata_final_with_SELEX_data_19032026.tsv", delim="\t") #this contains all motifs plus SELEX data info
 metadata= metadata %>% filter(experiment %in% c("HT-SELEX", "CAP-SELEX"))
 metadata=metadata %>% filter(!is.na(seed)) #3635
 
@@ -33,11 +33,13 @@ metadata=metadata %>% filter(!is.na(seed)) #3635
 metadata=metadata[order(metadata$length),]
 
 
-results_path="/scratch/project_2013895/SELEX/scored_kmers_fixed_N_seeds/" #3469 successfull
+#results_path="/scratch/project_2013895/SELEX/scored_kmers_fixed_N_seeds/" #
+results_path="/scratch/project_2013895/SELEX/scored_kmers_fixed_N_seeds_June2026/" #3595, one missing?
 
 #Filter out those which do not have either SELEX signal or background
-metadata=metadata %>% filter(!(is.na(CSC_SELEX_filename) | is.na(CSC_SELEX_background_filename))) #3573
+metadata=metadata %>% filter(!(is.na(CSC_SELEX_filename) | is.na(CSC_SELEX_background_filename))) #3596
 
+#which(metadata$ID=="TGIF2_TBX21_TGGGTC40NAAG_YYI_NAGGTGTCAWN_1_3") 682
 #which(metadata$ID=="Alx1_HT-SELEX_TAAAGC20NCG_Z_NNYAATTANN_1_3") #373
 #which(metadata$ID=="BARHL2_HT-SELEX_TCCAGT40NGAC_AI_NNTAATTGNN_1_3") #377
 #which(metadata$ID=="ARNTL_PITX1_CAP-SELEX_TCTTTC40NTTG_AAC_CACGTGNNNRGATTAN_1_3") #2333
@@ -79,8 +81,8 @@ if(end_ind > nrow(metadata)){
 path_local_scratch=Sys.getenv("LOCAL_SCRATCH")
 #dir(path_local_scratch)
 
-lambda_path="/scratch/project_2013895/SELEX/spacek/lambda_2026/"
-# ls | wc -l #3470
+lambda_path="/scratch/project_2013895/SELEX/spacek/lambda/"
+# ls | wc -l #3596
 
 #For which motifs lambda fails?
 
@@ -211,8 +213,11 @@ for(index in seq(start_ind, end_ind, 1)){ #0-9
   print(index)
   data=metadata[index,] 
   seed=data$seed
-    
-  res <- try(parse_spacek_report(paste0("/scratch/project_2013895/SELEX/spacek/lambda_2026/", data$ID, ".txt")), silent=TRUE)
+  
+  # TNS CCN NNG GSN NNNNNNNNN NNN NCA CGTGN 6*3+5+9 32
+  # NCA CGT GNN NNN NNNNNNNNN CCC NNN GGCNA
+  # NCA CGT GNN NNN NNNNNNNNN CCC NNN GGCNA
+  res <- try(parse_spacek_report(paste0("/scratch/project_2013895/SELEX/spacek/lambda/", data$ID, ".txt")), silent=TRUE)
   
   if(class(res)!="try-error"){
     if(!is.na(res$lambda)){
@@ -242,11 +247,11 @@ for(index in seq(start_ind, end_ind, 1)){ #0-9
       counts <- counts %>%
         mutate(`Corrected_count_scaled`=`Corrected_count`/max(`Corrected_count`)) %>% 
         arrange(desc(`Corrected_count_scaled`)) %>%
-        mutate(`Corrected_count_rank` = row_number()) %>% select(Kmer, `Corrected_count_scaled`, Corrected_count_rank)
+        mutate(`Corrected_count_rank` = row_number()) %>% select(Kmer, `Corrected_count`, `Corrected_count_scaled`, Corrected_count_rank)
       
       #score k-mers with motif
       
-      pcm=as.matrix(read.table(file=gsub("../../","/projappl/project_2006203/TFBS/",data$filename)))
+      pcm=as.matrix(read.table(file=gsub("../../","/projappl/project_2006203/TFBS/",data$filename))) #31 columns
       dimnames(pcm)=list(c("A", "C", "G", "T"))
       
       pfm <- TFBSTools::PFMatrix(ID=data$ID, 
@@ -285,7 +290,7 @@ for(index in seq(start_ind, end_ind, 1)){ #0-9
      
      counts <- counts %>%
        arrange(desc(`motif_match_score_scaled`)) %>%
-       mutate(`motif_match_score_rank` = row_number()) %>% select(Kmer, Corrected_count_scaled, Corrected_count_rank, motif_match_score_scaled, motif_match_score_rank)
+       mutate(`motif_match_score_rank` = row_number()) %>% select(Kmer, Corrected_count, Corrected_count_scaled, Corrected_count_rank, motif_match_score, motif_match_score_scaled, motif_match_score_rank)
      
      counts <- counts %>%
        arrange(`Corrected_count_rank`) 

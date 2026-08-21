@@ -11,7 +11,9 @@
 #SBATCH --gres=nvme:10
 #SBATCH --array=301-364# 1-364
 
-#sacct --format JobID%-20,State -j 30043694 | grep FAILED
+#sacct --format JobID%-20,Submit,Cluster,State,Elapsed,ElapsedRaw,ExitCode,User,Group,QOS,AllocCPUS,NNodes,NTasks,TotalCPU,ReqMem,MaxRSS,TIMELIMIT,ElapsedRaw,CPUTime,TotalCPU -j 30362167,30362189,30362272,30362467,30362880 | grep FAILED
+
+
 
 #30362167_1-10 Ok
 #30362189_11-100 OK

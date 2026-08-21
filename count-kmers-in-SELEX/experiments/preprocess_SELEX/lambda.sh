@@ -13,13 +13,23 @@ module load biokit
 #remove empty files
 #find . -type f -empty -delete #3470 left
 
-file="/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/metadata_motifs_with_SELEX_data.tsv" #3573
+file="/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_19032026.tsv" #3596
+#file="/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/metadata_motifs_with_SELEX_data.tsv" #3573
 signal_filenames="CSC_SELEX_filename"             
 background_filenames="CSC_SELEX_background_filename"
 motifs="ID"
 seeds="seed"
 ligands="ligand"
 
+out_folder=/scratch/project_2013895/SELEX/spacek/
+preprocessed_path=/scratch/project_2013895/SELEX/preprocessed_data/
+seqkit_stats=/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/seqkit_stats/
+svg_path=/scratch/project_2013895/SELEX/spacek/svg/
+#Outputs will be in 
+#ls /scratch/project_2013895/SELEX/spacek/svg/
+#ls /scratch/project_2013895/SELEX/spacek/lambda/
+#ls /scratch/project_2013895/SELEX/preprocessed_data/
+#ls /projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/seqkit_stats/
 
 readarray -t signals < <(
   awk -F'\t' -v c="$signal_filenames" 'NR==1{for(i=1;i<=NF;i++)h[$i]=i; next}{print $(h[c])}' "$file"
@@ -42,7 +52,7 @@ readarray -t ligands < <(
 
 #array=325 #MAX_HT-SELEX_TGACCT20NGA_Y_NNCACGTGNN_1_2
 
-nro_pwms=${#motifs[@]} #3573
+nro_pwms=${#motifs[@]} #3596
 start_ind=$(($array*10)) #100
 end_ind=$((($array+1)*10 -1)) #100
 length=10 #100
@@ -54,10 +64,16 @@ then
      end_ind=$(($nro_pwms-1))
 fi
 
+
+
+
+#echo ${motifs[@]/FOXO1_HT-SELEX_TTCAGC20NTA_AF_GTAAACATGTTTAC_2_3//} | cut -d/ -f1 | wc -w | tr -d ' '
+
+
 #target="TFAP2C_MAX_CAP-SELEX_TTAGTC40NTCC_AY_TNSCCNNNGGSNNNNNNNNNNNNNNCACGTGN_1_3"
 #for i in "${!motifs[@]}"; do [[ ${motifs[$i]} == "$target" ]] && echo $i; done
 #for ((i=start_ind; i<=end_ind; i++)); do
-for ((i=0; i<=3573; i++)); do
+for ((i=0; i<=3595; i++)); do
   #echo "i=$i"
 
 
@@ -72,14 +88,15 @@ for ((i=0; i<=3573; i++)); do
   sample_base="${sample##*/}"    #MEIS1_TGACCT20NGA_O_6.fastq.gz
   sample_no_ext="${sample_base%.*}" #MEIS1_TGACCT20NGA_O_6.fastq
   
-  background_base="${background##*/}"    
-  background_no_ext="${background_base%.*}" 
+  background_base="${background##*/}"    #fastq.gz
+  background_no_ext="${background_base%.*}" #fastq
   
-  preprocessed_path=/scratch/project_2013895/SELEX/preprocessed_data/
+
   
-  backgroud_test=$preprocessed_path"${background_no_ext%.fastq}".seq
+  background_test=$preprocessed_path"${background_no_ext%.fastq}".seq
   sample_test=$preprocessed_path"${sample_no_ext%.fastq}".seq
   
+  #Convert fastq.gz to fastq
   out="${preprocessed_path}${background_no_ext}"
   [[ -f "$background_test" ]] || zcat -- "$background" > "$out"
   
@@ -89,7 +106,7 @@ for ((i=0; i<=3573; i++)); do
   #wc -l ${preprocessed_path}${sample_no_ext} #320512
   #wc -l ${preprocessed_path}${background_no_ext} #252172
   
-  
+  #Convert fastq to fasta, also corrupted files will pass this
   out=$preprocessed_path"${sample_no_ext%.fastq}".fasta
   [[ -f "$sample_test" ]] || seqtk seq -A -- "${preprocessed_path}${sample_no_ext}" > "$out"
   out=$preprocessed_path"${background_no_ext%.fastq}".fasta
@@ -99,15 +116,18 @@ for ((i=0; i<=3573; i++)); do
   #wc -l $preprocessed_path"${sample_no_ext%.fastq}".fasta # 160256, numbers above divided by 2
   #wc -l $preprocessed_path"${background_no_ext%.fastq}".fasta # 126086
   
-  [[ -f "$sample_test" ]] || seqkit stats -- $preprocessed_path"${sample_no_ext%.fastq}".fasta > /projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/seqkit_stats/${sample_no_ext%.fastq}.txt #80,128
-  [[ -f "$background_test" ]] || seqkit stats -- $preprocessed_path"${background_no_ext%.fastq}".fasta > /projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/seqkit_stats/${background_no_ext%.fastq}.txt #63,043
+  #Write seqkit stats
+  [[ -f "$sample_test" ]] || seqkit stats -- $preprocessed_path"${sample_no_ext%.fastq}".fasta > $seqkit_stats${sample_no_ext%.fastq}.txt #80,128
+  [[ -f "$background_test" ]] || seqkit stats -- $preprocessed_path"${background_no_ext%.fastq}".fasta > $seqkit_stats${background_no_ext%.fastq}.txt #63,043
   
+  #Convert fasta to .seq
   out=$preprocessed_path"${sample_no_ext%.fastq}".seq
   [[ -f "$sample_test" ]] || sed '/^>/d' -- $preprocessed_path"${sample_no_ext%.fastq}".fasta > "$out"
   
   out=$preprocessed_path"${background_no_ext%.fastq}".seq
-  [[ -f "$backgroun_test" ]] || sed '/^>/d' -- $preprocessed_path"${background_no_ext%.fastq}".fasta > "$out"
+  [[ -f "$background_test" ]] || sed '/^>/d' -- $preprocessed_path"${background_no_ext%.fastq}".fasta > "$out"
   
+  #Remove fastq and fasta, only .seq remains
   rm $preprocessed_path"${sample_no_ext%.fastq}".fasta
   rm $preprocessed_path"${background_no_ext%.fastq}".fasta
   rm ${preprocessed_path}${background_no_ext}
@@ -120,17 +140,13 @@ for ((i=0; i<=3573; i++)); do
    
   fi
   
-  
-  out_folder=/scratch/project_2013895/SELEX/spacek/
-  
-  spacek40 "-$ligand_length" --f $preprocessed_path"${background_no_ext%.fastq}".seq $preprocessed_path"${sample_no_ext%.fastq}".seq $seed > $out_folder"lambda_2026/"$motif".txt"  #Produces also sample.seq_logo.svg (what info does this contain)
+  spacek40 "-$ligand_length" --f $preprocessed_path"${background_no_ext%.fastq}".seq $preprocessed_path"${sample_no_ext%.fastq}".seq $seed > $out_folder"lambda/"$motif".txt"  #Produces also sample.seq_logo.svg (what info does this contain)
   
   svg=$preprocessed_path"${sample_no_ext%.fastq}".seq_logo.svg
-  svg_path=/scratch/project_2013895/SELEX/spacek/svg/
+  
   out=$svg_path"${motif}".svg
   #echo $svg
   [[ -f "$svg" ]] && mv -- $svg $out
-  
   
 done
 

@@ -4,7 +4,11 @@
 array=$1
 addition=$2
 
-file="/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/metadata_motifs_with_SELEX_data.tsv" #3573
+#file="/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/metadata_motifs_with_SELEX_data.tsv" #3573
+file="/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_19032026.tsv" #3596
+
+
+
 signal_filenames="CSC_SELEX_filename"             
 background_filenames="CSC_SELEX_background_filename"
 motifs="ID"
@@ -25,15 +29,24 @@ readarray -t motifs < <(
   awk -F'\t' -v c="$motifs" 'NR==1{for(i=1;i<=NF;i++)h[$i]=i; next}{print $(h[c])}' "$file"
 )
 
+missing="/projappl/project_2013895/SELEX/count-kmers-in-SELEX/experiments/count_kmers_with_Ns/rerun_missing.txt"
+readarray -t miss < $missing
+declare -A pos
+for i in "${!motifs[@]}"; do pos[${motifs[i]}]=$i; done
+
+idx=()
+for m in "${miss[@]}"; do idx+=("${pos[$m]}"); done
+
 #1500-1509,2270-2279
 
-nro_pwms=${#signals[@]} #3573
+nro_pwms=${#signals[@]} #3596
 #start_ind=$(($array*10)) #100
 #end_ind=$((($array+1)*10 -1)) #100
 
 start_ind=$(($array*1)) #100
 end_ind=$((($array+1)*1 -1)) #100
 
+${pos[${miss[2]}]}
 
 
 if [[ $end_ind -gt $(($nro_pwms-1)) ]] 
@@ -44,7 +57,9 @@ fi
 
 out_path=/scratch/project_2013895/SELEX/kmer_counts_combined_fixed_N_seeds/
 
-for ((i=start_ind; i<=end_ind; i++)); do
+#for ((i=start_ind; i<=end_ind; i++)); do
+for ((j=start_ind; j<=end_ind; j++)); do
+  i=${pos[${miss[j]}]}
   echo "i=$i"
   #i=3179
   #i=2280

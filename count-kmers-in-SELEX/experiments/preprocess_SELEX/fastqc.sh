@@ -1,41 +1,74 @@
-
-
-file="/projappl/project_2013895/SELEX/count-kmers-in-SELEX/Data/metadata_motifs_with_SELEX_data.tsv" #3573
-signal_filenames="CSC_SELEX_filename"             
-background_filenames="CSC_SELEX_background_filename"
-motifs="ID"
-seeds="seed"
-ligands="ligand"
-
-
-readarray -t signals < <(
-  awk -F'\t' -v c="$signal_filenames" 'NR==1{for(i=1;i<=NF;i++)h[$i]=i; next}{print $(h[c])}' "$file"
-)
-readarray -t backgrounds < <(
-  awk -F'\t' -v c="$background_filenames" 'NR==1{for(i=1;i<=NF;i++)h[$i]=i; next}{print $(h[c])}' "$file"
-)
-
-readarray -t motifs < <(
-  awk -F'\t' -v c="$motifs" 'NR==1{for(i=1;i<=NF;i++)h[$i]=i; next}{print $(h[c])}' "$file"
-)
-
-readarray -t seeds < <(
-  awk -F'\t' -v c="$seeds" 'NR==1{for(i=1;i<=NF;i++)h[$i]=i; next}{print $(h[c])}' "$file"
-)
-
-readarray -t ligands < <(
-  awk -F'\t' -v c="$ligands" 'NR==1{for(i=1;i<=NF;i++)h[$i]=i; next}{print $(h[c])}' "$file"
-)
-
-
-signal=/scratch/project_2013895/SELEX/data/Jolma2013/submitted_ftp/BARHL2_TCCAGT40NGAC_AI_3.fastq.gz
-background=/scratch/project_2013895/SELEX/data/Jolma2013/submitted_ftp/BARHL2_TCCAGT40NGAC_AI_2.fastq.gz
-
-output=/scratch/project_2013895/SELEX/fastqc
+#!/bin/bash
+array=$1 #0-455
 
 module load fastqc/0.12.1
 
-fastqc --extract -o $output $signal $background 
+file="unique_SELEX.txt" #4552
+#output=/scratch/project_2013895/SELEX/fastqc
+output=/scratch/project_2013895/SELEX/fastqc_reads_with_N_removed
+
+mapfile -t files < $file
+
+
+nro_files=${#files[@]} #3573
+start_ind=$(($array*10)) #100
+end_ind=$((($array+1)*10 -1)) #100
+length=10 #100
+
+
+if [[ $end_ind -gt $(($nro_files-1)) ]] 
+then
+     echo $end_ind is greater than $(($nro_files-1))
+     end_ind=$(($nro_files-1))
+fi
+
+#The following fastq files are corrupted
+#/scratch/project_2013895/SELEX/data/Xie2025/submitted_ftp/HOXD3_CREM_3_YLIII_TGTAAG40NACT.fastq.gz
+#Failed to process file HOXD3_CREM_3_YLIII_TGTAAG40NACT.fastq.gz
+# uk.ac.babraham.FastQC.Sequence.SequenceFormatException: Midline 'GACTTTTAGGCAGCCCGACCTGCAAATCTGCCACGACAAT' didn't start with '+' at 811523
+#         at uk.ac.babraham.FastQC.Sequence.FastQFile.readNext(FastQFile.java:179)
+#         at uk.ac.babraham.FastQC.Sequence.FastQFile.next(FastQFile.java:129)
+#         at uk.ac.babraham.FastQC.Analysis.AnalysisRunner.run(AnalysisRunner.java:77)
+#         at java.lang.Thread.run(Thread.java:748)
+
+#zcat /scratch/project_2013895/SELEX/data/Xie2025/submitted_ftp/HOXD3_CREM_3_YLIII_TGTAAG40NACT.fastq.gz | sed -n '811521,811525p'
+
+# /scratch/project_2013895/SELEX/data/Xie2025/submitted_ftp/HOXD4_CREM_3_YLIII_TTCTGG40NTGC.fastq.gz
+# application/gzip
+# Failed to process file HOXD4_CREM_3_YLIII_TTCTGG40NTGC.fastq.gz
+# uk.ac.babraham.FastQC.Sequence.SequenceFormatException: ID line didn't start with '@' at line 752453
+#         at uk.ac.babraham.FastQC.Sequence.FastQFile.readNext(FastQFile.java:163)
+#         at uk.ac.babraham.FastQC.Sequence.FastQFile.next(FastQFile.java:129)
+#         at uk.ac.babraham.FastQC.Analysis.AnalysisRunner.run(AnalysisRunner.java:77)
+#         at java.lang.Thread.run(Thread.java:748)
+
+#zcat /scratch/project_2013895/SELEX/data/Xie2025/submitted_ftp/HOXD4_CREM_3_YLIII_TTCTGG40NTGC.fastq.gz | sed -n '752451,752455p'
+
+
+for ((i=start_ind; i<=end_ind; i++)); do
+   echo $i
+   echo ${files[$i]}
+   file=${files[$i]}
+   base="${file##*/}"    
+   #replace the file name
+   #fastqc --extract -o $output ${files[$i]} --quiet #orig files
+   fastqc --extract -o $output /scratch/project_2013895/SELEX/data_exclude_reads_with_N/$base --quiet #reads with N removed
+   
+done
+
+
+
+# "ELF1_CREM_3_YLIII_TTCATT40NTAT"  1747
+# "ELF4_CREM_3_YLIII_TCTAGA40NCGA"  1768
+# "HOXA4_CREM_3_YLIII_TAGACT40NGTG" 1987
+# "HOXD3_CREM_3_YLIII_TGTAAG40NACT" Corrupted fastq
+# "HOXD4_CREM_3_YLIII_TTCTGG40NTGC" Corrupted fastq
+# "PAX1_VSX2_3_YLIIII_TATAGC40NGAC" 2263 
+# "PAX2_VSX2_3_YLIIII_TTGCTG40NCTA" 2283 
+# "POU4F3_CREM_3_YLIII_TAAGTT40NGAT" 2346
+# "RFX5_CREM_3_YLIII_TCCCTT40NCAT"   2367
+
+
 #FastQC - A high throughput sequence QC analysis tool
 
 # SYNOPSIS

@@ -1,5 +1,6 @@
 library(dplyr)
 library(readr)
+library(tidyverse)
 
 rm(list=ls())
 # Load metadata
@@ -8,45 +9,51 @@ rm(list=ls())
 #                       delim = "\t")
 
 #This is needed for motif IDs
-metadata_motif_IDs <- read_delim("/projappl/project_2013895/motif_metadata/metadata_final.tsv", delim="\t") 
+#metadata_motif_IDs <- read_delim("/projappl/project_2013895/motif_metadata/metadata_final.tsv", delim="\t") 
 
-metadata_motif_IDs <- metadata_motif_IDs %>% dplyr::select(ID, motif_ID)
+#metadata_motif_IDs <- metadata_motif_IDs %>% dplyr::select(ID, motif_ID)
 
 #3594, lambda has been already added
-metadata <- read_delim("/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_and_proteins_04032026.tsv", 
-                       delim = "\t") #3597
+#metadata <- read_delim("/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_and_proteins_04032026.tsv", 
+#                       delim = "\t") #3597
 
-metadata=metadata %>%left_join(metadata_motif_IDs, by="ID") %>% relocate(motif_ID, .after=ID)
+metadata <- read_delim("/projappl/project_2013895/motif_metadata/motifs_with_SELEX_signal_and_background_and_proteins_01072026.tsv", 
+                       delim = "\t") #3933
 
 
-is.na(metadata$lambda) %>% table()
-#206 TRUE, 3388 FALSE
+#metadata=metadata %>%left_join(metadata_motif_IDs, by="ID") %>% relocate(motif_ID, .after=ID)
 
-(metadata$CSC_SELEX_filename=="") %>% table()
-(metadata$CSC_SELEX_background_filename=="") %>% table()
+metadata %>% filter(experiment!="Methyl-HT-SELEX") %>% nrow() #3636
 
-is.na(metadata$CSC_SELEX_filename=="") %>% table()
-is.na(metadata$CSC_SELEX_background_filename=="") %>% table()
+metadata %>% filter(experiment!="Methyl-HT-SELEX" & is.na(lambda)) %>%nrow() #40
+
+metadata %>% filter(experiment!="Methyl-HT-SELEX" & is.na(CSC_SELEX_filename)) %>%nrow() #31
+metadata %>% filter(experiment!="Methyl-HT-SELEX" & is.na(CSC_SELEX_background_filename)) %>%nrow() #27
+
 
 
 # Output file path
 # output_file <- "/scratch/project_2013895/SELEX/combined_kmers_protein_sequences/combined_kmers_with_metadata_better.tsv"
 #output_file <- "/scratch/project_2013895/SELEX/combined_kmers_protein_sequences/combined_kmers_with_metadata_better_maxscore_scaled.tsv"
 #output_file <- "/scratch/project_2013895/SELEX/combined_kmers_protein_sequences/test.tsv"
-output_file <- "/scratch/project_2013895/SELEX/sequence-to-affinity-data/all.tsv"
-separate_folder <- "/scratch/project_2013895/SELEX/sequence-to-affinity-data/separate_with_protein_sequences/"
-separate_folder_without_proteins <- "/scratch/project_2013895/SELEX/sequence-to-affinity-data/separate_without_protein_sequences/"
+#output_file <- "/scratch/project_2013895/SELEX/sequence-to-affinity-data/all.tsv"
+#separate_folder <- "/scratch/project_2013895/SELEX/sequence-to-affinity-data/separate_with_protein_sequences/"
+#separate_folder_without_proteins <- "/scratch/project_2013895/SELEX/sequence-to-affinity-data/separate_without_protein_sequences/"
+
+output_file <- "/scratch/project_2013895/SELEX/sequence-to-affinity-data-01072026/all.tsv"
+separate_folder <- "/scratch/project_2013895/SELEX/sequence-to-affinity-data-01072026/separate_with_protein_sequences/"
+separate_folder_without_proteins <- "/scratch/project_2013895/SELEX/sequence-to-affinity-data-01072026/separate_without_protein_sequences/"
 
 # Write header only once
-write_lines("motif_ID\tprotein_sequence_1\tprotein_sequence_2\tprotein_sequence_3\tprotein_sequence_4\tkmer\t count_score\tcount_score_rank\tmotif_match_score\tmotif_match_score_rank", output_file)
+write_lines("motif_ID\tprotein_sequence_1\tprotein_sequence_2\tprotein_sequence_3\tprotein_sequence_4\tkmer\t count_score_orig\t count_score\tcount_score_rank\tmotif_match_score_orig\tmotif_match_score\tmotif_match_score_rank", output_file)
 
 # Get list of input files
 #kmer_dir <- "/scratch/project_2013895/SELEX/streamed_kmers"
 #kmer_dir <- "/scratch/project_2013895/SELEX/streamed_kmers_scaled_by_maxscore"
 #kmer_files <- list.files(kmer_dir, pattern = "*.tsv", full.names = TRUE) #3755
 
-kmer_dir <- "/scratch/project_2013895/SELEX/scored_kmers_fixed_N_seeds/"
-kmer_files <- list.files(kmer_dir, pattern = "*.tsv", full.names = TRUE) #3469
+kmer_dir <- "/scratch/project_2013895/SELEX/scored_kmers_fixed_N_seeds_June2026"
+kmer_files <- list.files(kmer_dir, pattern = "*.tsv", full.names = TRUE) #3595
 
 # Extract motif ID from filename
 extract_id <- function(filename) {
@@ -56,9 +63,11 @@ extract_id <- function(filename) {
 included_motifs=c()
 
 #Remove cases for which we do not have correct protein info
-motifs_with_protein_info <- read_delim("/projappl/project_2013895/motif_metadata/motifs_with_protein_info_04032026.tsv", delim="\t") #3224
+#motifs_with_protein_info <- read_delim("/projappl/project_2013895/motif_metadata/motifs_with_protein_info_04032026.tsv", delim="\t") #3224
 
-
+motifs_with_protein_info <- metadata |>
+  filter(!is.na(`protein sequence 1`)) |>
+  dplyr::select(ID) #3326
 
 
 # Process files one-by-one
@@ -75,7 +84,7 @@ for (file in kmer_files) {
     next
   }
   
-  kmer_data=read_delim(file=file, delim="\t")
+  kmer_data=read_delim(file=file, delim="\t") #"Kmer" "Corrected_count""Corrected_count_scaled" "Corrected_count_rank" "motif_match_score" "motif_match_score_scaled" "motif_match_score_rank"  
   if( names(table(is.na(kmer_data$Corrected_count_scaled)))=="TRUE"){
     next
   }
@@ -102,7 +111,7 @@ for (file in kmer_files) {
   # Rename columns for writing
   names(combined) <- c("motif_ID", "protein_sequence_1", "protein_sequence_2", 
                        "protein_sequence_3", "protein_sequence_4", 
-                       "kmer", "count_score", "count_score_rank","motif_match_score","motif_match_score_rank")
+                       "kmer", "count_score_orig","count_score", "count_score_rank","motif_match_score_orig","motif_match_score","motif_match_score_rank")
   
   
   
@@ -118,11 +127,11 @@ for (file in kmer_files) {
  
 }
 
-saveRDS(included_motifs, "/projappl/project_2013895/SELEX/combine-protein-sequences-and-kmers/experiments/included_motifs_final.RDS")
+saveRDS(included_motifs, "/projappl/project_2013895/SELEX/combine-protein-sequences-and-kmers/experiments/included_motifs_final_01072026.RDS")
 
-#included_motifs=readRDS("/projappl/project_2013895/SELEX/combine-protein-sequences-and-kmers/experiments/included_motifs_final.RDS") #3107
+#included_motifs=readRDS("/projappl/project_2013895/SELEX/combine-protein-sequences-and-kmers/experiments/included_motifs_final_01072026.RDS") #3277
 write.table(included_motifs, 
- "/projappl/project_2013895/SELEX/combine-protein-sequences-and-kmers/experiments/included_motifs_final.txt",
+ "/projappl/project_2013895/SELEX/combine-protein-sequences-and-kmers/experiments/included_motifs_final_01072026.txt",
  quote=FALSE, 
  sep="\t",
  row.names=FALSE,
@@ -138,7 +147,7 @@ write.table(included_motifs,
 
 metadata$included_in_S2A=FALSE
 metadata$included_in_S2A[metadata$ID %in% included_motifs]=TRUE
-write_delim(metadata, "/projappl/project_2013895/motif_metadata/motifs_with_S2A_and_proteins.tsv", 
+write_delim(metadata, "/projappl/project_2013895/motif_metadata/motifs_with_S2A_and_proteins_01072026.tsv", 
                                               delim = "\t")
 
 # Read k-mer file in chunks

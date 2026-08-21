@@ -1,15 +1,16 @@
 #!/bin/bash
-#SBATCH --job-name=count_kmers
-#SBATCH --output=count_kmers_out/count_kmers_%A_%a.out
-#SBATCH --error=count_kmers_err/count_kmers_%A_%a.err
-#SBATCH --account=project_2007567
-#SBATCH --partition=longrun
+#SBATCH --job-name=miss_count_kmers
+#SBATCH --output=miss_count_kmers_out/count_kmers_%A_%a.out
+#SBATCH --error=miss_count_kmers_err/count_kmers_%A_%a.err
+#SBATCH --account=project_2013895
+#SBATCH --partition=small #longrun
 #SBATCH --ntasks=1
-#SBATCH --time=7-00:00:00
+#SBATCH --time=3-00:00:00 #some need 7 days
 #SBATCH --mem-per-cpu=5G #
 #SBATCH --cpus-per-task=1
-#SBATCH --array=435,436,438,439,442,519 #0-357 #3572
+#SBATCH --array=0-22 #0-359 #3595
 
+#35320036_[0-22] 
 
 #sacct --format JobID%-20,State -j 31651015
 
@@ -51,7 +52,7 @@
 # 3435,3436,3438,3439,3442,3519: 31860682 OK, took 4 days
 #SBATCH --gres=nvme:5
 
-srun count_kmers_with_Ns.sh ${SLURM_ARRAY_TASK_ID} 3000
+srun count_kmers_with_Ns.sh ${SLURM_ARRAY_TASK_ID} 0
 
 
 seff $SLURM_JOBID

@@ -45,6 +45,7 @@ all_data=data.frame()
 for(i in 1:nrow(metadata)){
   print(i)
   #i=1
+  #i=708
   if(file.exists(paste0(results_path,metadata$ID[i],".tsv"))){
     file=paste0(results_path,metadata$ID[i],".tsv")
   }else{
@@ -78,6 +79,14 @@ for(i in 1:nrow(metadata)){
    correlation_data$pearson_pvalue[i]=as.numeric(ct_pearson$p.value)
    correlation_data$spearman_pvalue[i]=as.numeric(ct_spearman$p.value)
    correlation_data$kendall_pvalue[i]=as.numeric(ct_kendall$p.value)
+   
+   #data=data %>% filter(Corrected_count>0)
+   #data$log_Corrected_count=log(data$Corrected_count)
+   #data$log_Correct_count_scaled=data$log_Corrected_count/max(data$log_Corrected_count)
+   #ggscatter(data, x = "motif_match_score", y = "log_Corrected_count", 
+  #             add = "reg.line", conf.int = TRUE, 
+  #             cor.coef = TRUE, cor.method = "pearson",
+  #             xlab = "Motif match score", ylab = "k-mer count score")
    
    p=ggscatter(data, x = "motif_match_score_scaled", y = "Corrected_count_scaled", 
              add = "reg.line", conf.int = TRUE, 

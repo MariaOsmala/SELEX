@@ -9,7 +9,7 @@
 #SBATCH --mem-per-cpu=5G #360
 #SBATCH --cpus-per-task=1
 
-# 28703620
+# 35340708 1.7.2026
 # Load r-env
 module load r-env/442
 
@@ -23,8 +23,8 @@ echo "TMPDIR=/scratch/project_2013895/tmp///" >> ~/.Renviron
 
 
 # Run the R script
-srun apptainer_wrapper exec Rscript --no-save ../code/combine_protein_sequences_and_kmers_better.R $SLURM_ARRAY_TASK_ID
-
+srun apptainer_wrapper exec Rscript --no-save ../code/combine_protein_sequences_and_kmers_better.R 
+                                             
 seff $SLURM_JOBID
 
 #cd /scratch/project_2013895/SELEX/combined_kmers_protein_sequences/
@@ -32,8 +32,8 @@ seff $SLURM_JOBID
 
 #Copy to allas
 
-module load allas
-allas-conf project_2013895
+#module load allas
+#allas-conf project_2013895
 
 
 #a-publish -b from_sequence_to_affinity from_sequence_to_affinity_data.tsv.gz
